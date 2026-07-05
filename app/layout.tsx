@@ -1,5 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { SiteFooter, SiteHeader, SkipLink } from "@/components/site-chrome";
+import { siteSchema } from "@/lib/schema";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, jsonLd } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,36 +15,32 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const title = "Crop & Resize — Private, In-Browser Image Editor";
-const description =
-  "Crop and resize photos entirely in your browser — nothing is ever uploaded or stored. Full-quality output, ready to download or share, for form photo requirements and beyond.";
+// Set these in the Vercel project's environment variables to verify the site
+// in Google Search Console and Bing Webmaster Tools.
+const googleVerification = process.env.GOOGLE_SITE_VERIFICATION;
+const bingVerification = process.env.BING_SITE_VERIFICATION;
 
 export const metadata: Metadata = {
-  title,
-  description,
-  keywords: [
-    "image crop tool",
-    "resize image online",
-    "crop photo for form",
-    "private image editor",
-    "no upload image cropper",
-    "client-side image editor",
-  ],
-  openGraph: {
-    title,
-    description,
-    type: "website",
-    locale: "en_US",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_NAME,
+    template: `%s — ${SITE_NAME}`,
   },
-  twitter: {
-    card: "summary_large_image",
-    title,
-    description,
-  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
   robots: {
     index: true,
     follow: true,
   },
+  verification: {
+    ...(googleVerification && { google: googleVerification }),
+    ...(bingVerification && { other: { "msvalidate.01": bingVerification } }),
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#f5f4f0",
+  colorScheme: "light",
 };
 
 export default function RootLayout({
@@ -54,7 +53,13 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(siteSchema)} />
+        <SkipLink />
+        <SiteHeader />
+        {children}
+        <SiteFooter />
+      </body>
     </html>
   );
 }
