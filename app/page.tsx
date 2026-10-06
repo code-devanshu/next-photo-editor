@@ -7,13 +7,15 @@ import {
   PrivacyNote,
   SizesTable,
 } from "@/components/guide-sections";
-import { HOME_FAQS } from "@/lib/guides";
-import { faqSchema } from "@/lib/schema";
-import { SITE_DESCRIPTION, jsonLd, pageMetadata } from "@/lib/site";
+import { HOME_FAQS, HOME_UPDATED } from "@/lib/guides";
+import { pageSchema } from "@/lib/schema";
+import { SITE_DESCRIPTION, SITE_NAME, jsonLd, pageMetadata } from "@/lib/site";
+
+const HOME_TITLE = "Resize photos for passport, visa & PAN card forms";
 
 // The root layout's title template only applies to child segments, so the home title is written out in full.
 export const metadata: Metadata = pageMetadata({
-  title: "Resize photos for passport, visa & PAN card forms — FormPic",
+  title: `${HOME_TITLE} — ${SITE_NAME}`,
   description: SITE_DESCRIPTION,
   path: "/",
   absoluteTitle: true,
@@ -25,7 +27,18 @@ export default function Home() {
       id="main"
       className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pt-6 pb-16 sm:px-6"
     >
-      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(faqSchema(HOME_FAQS))} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={jsonLd(
+          pageSchema({
+            path: "/",
+            name: HOME_TITLE,
+            description: SITE_DESCRIPTION,
+            dateModified: HOME_UPDATED,
+            faqs: HOME_FAQS,
+          })
+        )}
+      />
       <PhotoEditor
         title="Crop & resize photos for forms"
         titleAccent=", in seconds."

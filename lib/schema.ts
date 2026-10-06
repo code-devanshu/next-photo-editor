@@ -1,4 +1,4 @@
-import type { Faq } from "@/lib/guides";
+import type { Faq, Source } from "@/lib/guides";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 
 export const siteSchema = {
@@ -34,10 +34,56 @@ export const siteSchema = {
   ],
 };
 
-export function faqSchema(faqs: Faq[]) {
+/**
+ * The page itself, typed as an FAQPage so its questions stay eligible for FAQ results.
+ * Guide pages also pass a breadcrumb name and the official sources they cite.
+ */
+export function pageSchema({
+  path,
+  name,
+  description,
+  dateModified,
+  faqs,
+  breadcrumbName,
+  sources,
+}: {
+  path: string;
+  name: string;
+  description: string;
+  dateModified: string;
+  faqs: Faq[];
+  breadcrumbName?: string;
+  sources?: Source[];
+}) {
+  const url = path === "/" ? SITE_URL : `${SITE_URL}${path}`;
   return {
     "@context": "https://schema.org",
     "@type": "FAQPage",
+    "@id": `${url}#webpage`,
+    url,
+    name,
+    description,
+    inLanguage: "en",
+    dateModified,
+    isPartOf: { "@id": `${SITE_URL}/#website` },
+    about: { "@id": `${SITE_URL}/#app` },
+    ...(breadcrumbName && {
+      breadcrumb: {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: SITE_NAME, item: SITE_URL },
+          { "@type": "ListItem", position: 2, name: breadcrumbName, item: url },
+        ],
+      },
+    }),
+    ...(sources && {
+      citation: sources.map((source) => ({
+        "@type": "WebPage",
+        name: source.title,
+        url: source.url,
+        publisher: { "@type": "Organization", name: source.publisher },
+      })),
+    }),
     mainEntity: faqs.map(({ question, answer }) => ({
       "@type": "Question",
       name: question,

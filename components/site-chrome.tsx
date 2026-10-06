@@ -41,6 +41,15 @@ export function SiteFooter() {
           <span className="max-w-[44ch] text-pretty text-muted">
             Photos for forms, sized in your browser. No uploads, no accounts.
           </span>
+          <span className="text-muted">
+            Built by{" "}
+            <a
+              href="https://www.devanshuverma.in/"
+              className="underline underline-offset-4 transition-colors duration-200 hover:text-foreground"
+            >
+              Devanshu Verma
+            </a>
+          </span>
         </div>
         <nav aria-label="Photo sizes">
           <ul className="flex flex-col gap-1.5">

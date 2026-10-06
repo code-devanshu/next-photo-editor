@@ -1,10 +1,19 @@
 import { ImageResponse } from "next/og";
 import { CropMark } from "@/lib/brand-mark";
 
-export const size = { width: 32, height: 32 };
-export const contentType = "image/png";
+// 32 px for browser tabs; 192 and 512 px are what app/manifest.ts needs to make the site installable.
+const ICON_SIZES = [32, 192, 512];
 
-export default function Icon() {
+export function generateImageMetadata() {
+  return ICON_SIZES.map((px) => ({
+    id: String(px),
+    size: { width: px, height: px },
+    contentType: "image/png",
+  }));
+}
+
+export default async function Icon({ id }: { id: Promise<string | number> }) {
+  const px = Number(await id);
   return new ImageResponse(
     <div
       style={{
@@ -15,8 +24,9 @@ export default function Icon() {
         justifyContent: "center",
       }}
     >
-      <CropMark size={32} radius={7} />
+      {/* Install icons are full-bleed so the OS can apply its own mask shape. */}
+      <CropMark size={px} radius={px === 32 ? 7 : 0} />
     </div>,
-    { ...size }
+    { width: px, height: px }
   );
 }

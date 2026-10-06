@@ -8,10 +8,11 @@ import {
   OtherSizes,
   Requirements,
   SizeAnswer,
+  Sources,
 } from "@/components/guide-sections";
 import { GUIDES, getGuide } from "@/lib/guides";
 import { getPreset } from "@/lib/presets";
-import { faqSchema } from "@/lib/schema";
+import { pageSchema } from "@/lib/schema";
 import { jsonLd, pageMetadata } from "@/lib/site";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -44,7 +45,20 @@ export default async function GuidePage({ params }: Props) {
       id="main"
       className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pt-6 pb-16 sm:px-6"
     >
-      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(faqSchema(guide.faqs))} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={jsonLd(
+          pageSchema({
+            path: `/${guide.slug}`,
+            name: guide.metaTitle,
+            description: guide.metaDescription,
+            dateModified: guide.updated,
+            faqs: guide.faqs,
+            breadcrumbName: `${preset.name} photo`,
+            sources: guide.sources,
+          })
+        )}
+      />
       <PhotoEditor
         title={guide.heading}
         titleAccent={guide.headingAccent}
@@ -59,6 +73,7 @@ export default async function GuidePage({ params }: Props) {
         />
         <HowToSteps title={`How to make a ${guide.subject}`} preset={preset} />
         <FaqList faqs={guide.faqs} />
+        <Sources sources={guide.sources} updated={guide.updated} />
         <OtherSizes currentSlug={preset.slug} />
       </GuideContent>
     </main>

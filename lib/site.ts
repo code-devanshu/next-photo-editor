@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-export const SITE_URL = "https://formpic.vercel.app";
+export const SITE_URL = "https://formpic.devanshuverma.in";
 export const SITE_NAME = "FormPic";
 export const SITE_DESCRIPTION =
   "Crop and resize photos for passport, visa, PAN card and other application forms, right in your browser. Exact pixel sizes, JPEG or PNG, free, and nothing is uploaded.";
@@ -25,7 +25,6 @@ export function pageMetadata({
     openGraph: {
       type: "website",
       siteName: SITE_NAME,
-      locale: "en_US",
       url: path,
       title: fullTitle,
       description,

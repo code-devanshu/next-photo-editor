@@ -1,5 +1,6 @@
 export type Faq = { question: string; answer: string };
 export type Fact = { label: string; value: string; note?: string };
+export type Source = { publisher: string; title: string; url: string };
 
 export type Guide = {
   /** Matches the preset slug in lib/presets.ts. */
@@ -17,7 +18,14 @@ export type Guide = {
   facts: Fact[];
   requirements: string[];
   faqs: Faq[];
+  /** Official pages the figures were checked against. */
+  sources: Source[];
+  /** When the page content last changed, as YYYY-MM-DD. Feeds the sitemap and structured data. */
+  updated: string;
 };
+
+/** When the home page content last changed, as YYYY-MM-DD. */
+export const HOME_UPDATED = "2026-10-07";
 
 export const HOME_FAQS: Faq[] = [
   {
@@ -105,6 +113,14 @@ export const GUIDES: Guide[] = [
           "Yes. Open this page on your phone, tap Use camera or pick a photo from your gallery, then crop and download. It works in any modern mobile browser.",
       },
     ],
+    sources: [
+      {
+        publisher: "GOV.UK",
+        title: "Get a passport photo: photo requirements",
+        url: "https://www.gov.uk/photos-for-passports/photo-requirements",
+      },
+    ],
+    updated: "2026-10-07",
   },
   {
     slug: "us-passport-photo",
@@ -156,6 +172,19 @@ export const GUIDES: Guide[] = [
           "Choose JPEG and lower the quality slider until the size shown on the Download button is under 240 KB. A 600 × 600 px JPEG is usually well under the limit.",
       },
     ],
+    sources: [
+      {
+        publisher: "U.S. Department of State",
+        title: "Digital image requirements for visa photos",
+        url: "https://travel.state.gov/content/travel/en/us-visas/visa-information-resources/photos/digital-image-requirements.html",
+      },
+      {
+        publisher: "U.S. Department of State",
+        title: "Passport photos",
+        url: "https://travel.state.gov/en/passports/apply/help/photos.html",
+      },
+    ],
+    updated: "2026-10-07",
   },
   {
     slug: "pan-card-photo",
@@ -205,6 +234,14 @@ export const GUIDES: Guide[] = [
           "No. The photo is cropped and compressed in your browser. FormPic has no upload step, so the only place your photo goes is the PAN portal you submit it to.",
       },
     ],
+    sources: [
+      {
+        publisher: "Protean (formerly NSDL e-Gov)",
+        title: "PAN card documents: scanning and uploading",
+        url: "https://www.proteantech.in/articles/pan-card-documents-scanning-uploading-method/",
+      },
+    ],
+    updated: "2026-10-07",
   },
 ];
 

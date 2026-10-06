@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Fact, Faq } from "@/lib/guides";
+import type { Fact, Faq, Source } from "@/lib/guides";
 import { FORM_PRESETS, type FormPreset } from "@/lib/presets";
 
 // Server-rendered content below the editor. Headings are phrased as the questions
@@ -209,6 +209,40 @@ export function FaqList({ faqs }: { faqs: Faq[] }) {
           </div>
         ))}
       </div>
+    </Section>
+  );
+}
+
+/** "2026-10-07" → "7 October 2026", read as UTC so the date doesn't shift by time zone. */
+function formatDate(isoDate: string) {
+  return new Date(`${isoDate}T00:00:00Z`).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+export function Sources({ sources, updated }: { sources: Source[]; updated: string }) {
+  return (
+    <Section id="sources" kicker="Sources" title="Where these numbers come from">
+      <ul className="flex flex-col gap-3">
+        {sources.map(({ publisher, title, url }) => (
+          <li key={url} className="flex flex-col gap-0.5">
+            <a
+              href={url}
+              rel="noopener"
+              className="w-fit font-medium underline decoration-border-strong underline-offset-4 transition-colors duration-200 hover:decoration-accent"
+            >
+              {title}
+            </a>
+            <span className="text-sm text-muted">{publisher}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-6 text-sm text-muted">
+        Last checked against these sources on <time dateTime={updated}>{formatDate(updated)}</time>.
+      </p>
     </Section>
   );
 }
