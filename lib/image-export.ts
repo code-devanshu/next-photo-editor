@@ -60,6 +60,68 @@ export function canvasToBlob(
   });
 }
 
+// Above this, JPEG quality adds bytes without a visible gain, so the size search starts here.
+export const TOP_QUALITY = 0.92;
+const MIN_QUALITY = 0.05;
+const SEARCH_STEPS = 7;
+
+/** Where the file landed against the form's size range. */
+export type FitStatus = "fits" | "too-big" | "too-small";
+export type EncodedImage = { blob: Blob; quality: number; status: FitStatus };
+export type ByteRange = { min: number | null; max: number | null };
+
+function statusOf(size: number, { min, max }: ByteRange): FitStatus {
+  if (max && size > max) return "too-big";
+  if (min && size < min) return "too-small";
+  return "fits";
+}
+
+/**
+ * Encodes the canvas. With a byte limit (JPEG only), binary-searches for the highest quality whose
+ * file fits under it, going above the usual top quality when that's what reaches the minimum.
+ * When no quality lands in range, returns the closest file with its status.
+ */
+export async function encodeCanvas(
+  canvas: HTMLCanvasElement,
+  format: ExportFormat,
+  quality: number,
+  range: ByteRange
+): Promise<EncodedImage | null> {
+  if (format === "png" || !range.max) {
+    const blob = await canvasToBlob(canvas, format, quality);
+    return blob && { blob, quality, status: statusOf(blob.size, range) };
+  }
+
+  let ceiling = TOP_QUALITY;
+  let top = await canvasToBlob(canvas, "jpeg", ceiling);
+  if (!top) return null;
+  if (range.min && top.size < range.min) {
+    ceiling = 1;
+    top = await canvasToBlob(canvas, "jpeg", ceiling);
+    if (!top) return null;
+  }
+  if (top.size <= range.max) return { blob: top, quality: ceiling, status: statusOf(top.size, range) };
+
+  let low = MIN_QUALITY;
+  let high = ceiling;
+  let best: { blob: Blob; quality: number } | null = null;
+  for (let step = 0; step < SEARCH_STEPS; step++) {
+    const mid = (low + high) / 2;
+    const blob = await canvasToBlob(canvas, "jpeg", mid);
+    if (!blob) return null;
+    if (blob.size <= range.max) {
+      best = { blob, quality: mid };
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+  if (best) return { ...best, status: statusOf(best.blob.size, range) };
+
+  const smallest = await canvasToBlob(canvas, "jpeg", MIN_QUALITY);
+  return smallest && { blob: smallest, quality: MIN_QUALITY, status: statusOf(smallest.size, range) };
+}
+
 export function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");

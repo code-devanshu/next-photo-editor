@@ -28,6 +28,7 @@ export const siteSchema = {
         "Passport size (35×45 mm), US passport and visa (2×2 in), and PAN card (25×35 mm) presets",
         "Exact pixel sizes with an aspect-ratio lock",
         "JPEG or PNG export with adjustable quality and a live file-size estimate",
+        "Compression to a file size limit in KB, at the highest JPEG quality that fits",
         "Camera capture on phones and laptops",
       ],
     },

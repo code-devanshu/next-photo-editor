@@ -1,31 +1,80 @@
 import Link from "next/link";
-import { CropMark } from "@/lib/brand-mark";
+import { BrandMark } from "@/lib/brand-mark";
 import { LockIcon } from "@/lib/icons";
-import { FORM_PRESETS } from "@/lib/presets";
-import { SITE_NAME } from "@/lib/site";
+import { LIMIT_GUIDES } from "@/lib/guides";
+import { FORM_PRESETS, presetSizeRange, presetTitle, type FormPreset } from "@/lib/presets";
+import { FEEDBACK_URL, SITE_NAME } from "@/lib/site";
 
 export function SkipLink() {
   return (
     <a
       href="#main"
-      className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded-lg focus:bg-foreground focus:px-3 focus:py-2 focus:text-sm focus:text-background"
+      className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-booth focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-ink"
     >
       Skip to content
     </a>
   );
 }
 
+function Wordmark() {
+  return (
+    <Link href="/" className="-m-1 flex items-center gap-2.5 rounded-lg p-1">
+      <BrandMark size={30} />
+      <span className="figures text-[26px] text-booth">{SITE_NAME}</span>
+    </Link>
+  );
+}
+
+const ID_PRESETS = FORM_PRESETS.filter((preset) => preset.group === "id");
+const EXAM_PRESETS = FORM_PRESETS.filter((preset) => preset.group === "exam");
+
+function FooterPresetList({
+  presets,
+  detail,
+}: {
+  presets: FormPreset[];
+  detail: (preset: FormPreset) => string | null;
+}) {
+  return (
+    <ul className="mt-3 flex flex-col gap-2">
+      {presets.map((preset) => (
+        <li key={preset.slug}>
+          <Link
+            href={`/${preset.slug}`}
+            className="group flex items-baseline gap-3 text-stage-muted transition-colors duration-200 hover:text-stage-text"
+          >
+            <span className="underline-offset-4 group-hover:underline">{presetTitle(preset)}</span>
+            <span className="text-xs text-stage-muted/80">{detail(preset)}</span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function SiteHeader() {
   return (
-    <header className="border-b border-border">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3.5 sm:px-6">
-        <Link href="/" className="-m-1 flex items-center gap-2.5 rounded-lg p-1">
-          <CropMark size={26} radius={7} />
-          <span className="text-[15px] font-semibold tracking-tight">{SITE_NAME}</span>
-        </Link>
-        <p className="hidden items-center gap-1.5 text-xs text-muted sm:flex">
-          <LockIcon className="size-3.5" />
-          Processed on your device
+    <header className="on-dark bg-ink text-stage-text">
+      <div className="mx-auto flex h-15 w-full max-w-[88rem] items-center justify-between gap-6 px-4 sm:px-6">
+        <Wordmark />
+        <nav aria-label="Photo sizes" className="hidden md:block">
+          <ul className="flex items-center gap-1">
+            {ID_PRESETS.map((preset) => (
+              <li key={preset.slug}>
+                <Link
+                  href={`/${preset.slug}`}
+                  className="rounded-md px-3 py-2 text-sm text-stage-muted transition-colors duration-200 hover:bg-stage-raised hover:text-stage-text"
+                >
+                  {preset.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <p className="flex items-center gap-1.5 text-xs text-stage-muted">
+          <LockIcon className="size-3.5 text-booth" />
+          <span className="hidden sm:inline">Processed on your device</span>
+          <span className="sm:hidden">On-device</span>
         </p>
       </div>
     </header>
@@ -34,33 +83,57 @@ export function SiteHeader() {
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-border">
-      <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 pt-8 pb-10 text-sm sm:grid-cols-[minmax(0,1fr)_auto] sm:px-6">
-        <div className="flex flex-col gap-1.5">
-          <span className="font-semibold tracking-tight">{SITE_NAME}</span>
-          <span className="max-w-[44ch] text-pretty text-muted">
-            Photos for forms, sized in your browser. No uploads, no accounts.
-          </span>
-          <span className="text-muted">
+    <footer className="on-dark bg-ink text-stage-text">
+      <div className="mx-auto grid w-full max-w-[88rem] gap-10 px-4 pt-12 pb-14 text-sm sm:grid-cols-2 sm:gap-x-16 sm:px-6 lg:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
+        <div className="flex flex-col gap-3">
+          <Wordmark />
+          <p className="max-w-[44ch] text-pretty text-stage-muted">
+            Photos for forms, sized in your browser. No uploads, no accounts, no watermark.
+          </p>
+          <p className="text-stage-muted">
             Built by{" "}
             <a
               href="https://www.devanshuverma.in/"
-              className="underline underline-offset-4 transition-colors duration-200 hover:text-foreground"
+              className="text-stage-text underline decoration-stage-line underline-offset-4 transition-colors duration-200 hover:decoration-booth"
             >
               Devanshu Verma
             </a>
-          </span>
+          </p>
+          <p className="text-stage-muted">
+            Missing a size or feature?{" "}
+            <a
+              href={FEEDBACK_URL}
+              rel="noopener"
+              className="text-stage-text underline decoration-stage-line underline-offset-4 transition-colors duration-200 hover:decoration-booth"
+            >
+              Send a suggestion
+            </a>
+          </p>
         </div>
-        <nav aria-label="Photo sizes">
-          <ul className="flex flex-col gap-1.5">
-            {FORM_PRESETS.map((preset) => (
-              <li key={preset.slug}>
+        <nav aria-labelledby="footer-sizes">
+          <h2 id="footer-sizes" className="signage text-lg text-stage-text">
+            Photo sizes
+          </h2>
+          <FooterPresetList presets={ID_PRESETS} detail={(preset) => preset.spec} />
+        </nav>
+        <nav aria-labelledby="footer-exams">
+          <h2 id="footer-exams" className="signage text-lg text-stage-text">
+            Exam forms
+          </h2>
+          <FooterPresetList presets={EXAM_PRESETS} detail={presetSizeRange} />
+        </nav>
+        <nav aria-labelledby="footer-limits">
+          <h2 id="footer-limits" className="signage text-lg text-stage-text">
+            File size
+          </h2>
+          <ul className="mt-3 flex flex-col gap-2">
+            {LIMIT_GUIDES.map((guide) => (
+              <li key={guide.slug}>
                 <Link
-                  href={`/${preset.slug}`}
-                  className="text-muted underline-offset-4 transition-colors duration-200 hover:text-foreground hover:underline"
+                  href={`/${guide.slug}`}
+                  className="text-stage-muted underline-offset-4 transition-colors duration-200 hover:text-stage-text hover:underline"
                 >
-                  {preset.name} photo{" "}
-                  <span className="font-mono text-xs text-faint">{preset.spec}</span>
+                  Resize image to {guide.kb} KB
                 </Link>
               </li>
             ))}

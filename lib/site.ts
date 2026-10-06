@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 
 export const SITE_URL = "https://formpic.devanshuverma.in";
 export const SITE_NAME = "FormPic";
+/** Suggestions and size requests go to the contact form on the author's portfolio. */
+export const FEEDBACK_URL = "https://www.devanshuverma.in/#contact";
 export const SITE_DESCRIPTION =
-  "Crop and resize photos for passport, visa, PAN card and other application forms, right in your browser. Exact pixel sizes, JPEG or PNG, free, and nothing is uploaded.";
+  "Crop and resize photos for passport, visa, PAN card and other application forms, right in your browser. Exact pixel sizes, any KB limit, JPEG or PNG, free, and nothing is uploaded.";
 
 /** Per-page metadata. Pages set their own Open Graph block because nested metadata objects replace, not merge. */
 export function pageMetadata({

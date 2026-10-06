@@ -9,12 +9,16 @@ import ReactCrop, {
   type PixelCrop,
 } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
+import { PresetOutline } from "@/components/preset-outline";
 import {
   canvasToBlob,
   downloadBlob,
   drawCroppedCanvas,
+  encodeCanvas,
   formatBytes,
+  TOP_QUALITY,
   type ExportFormat,
+  type FitStatus,
 } from "@/lib/image-export";
 import { FORM_PRESETS, getPreset, type FormPreset } from "@/lib/presets";
 import {
@@ -42,45 +46,71 @@ const ASPECT_PRESETS: { label: string; value: number | undefined }[] = [
   { label: "3:2", value: 3 / 2 },
 ];
 
-const HIGHLIGHTS = [
-  { term: "Private", detail: "Runs in your browser. Nothing is uploaded or stored." },
-  { term: "Exact", detail: "Exported at the exact pixel size you set, as JPEG or lossless PNG." },
-  { term: "Presets", detail: "Passport size 35×45 mm, US passport & visa 2×2 in, PAN card 25×35 mm." },
-  { term: "Free", detail: "No account, no sign-up, no watermark." },
-];
+// Common upload limits offered as one-tap choices; any other limit can be typed in.
+const LIMIT_CHOICES = [20, 50, 100];
+// Portals differ on whether a KB is 1000 or 1024 bytes, so each bound uses the stricter reading:
+// a maximum counts 1000 bytes per KB and a minimum counts 1024.
+const BYTES_PER_KB = 1000;
+const MIN_BYTES_PER_KB = 1024;
+// Shrink to fit aims for a file that fits at this quality, so the photo stays clean.
+const SHRINK_QUALITY = 0.8;
+// Enlarge to fit aims this far past the minimum, so small encoder differences don't drop below it.
+const ENLARGE_MARGIN = 1.2;
+// How close the output's shape must stay to the preset's for the preset's minimum to still apply.
+const SHAPE_TOLERANCE = 0.02;
 
-// Crop-mark brackets framing the dropzone; they tighten inward while a file is dragged over.
-const DROPZONE_CORNERS = [
-  "top-3 left-3 rounded-tl-md border-t-2 border-l-2 group-data-dragging:translate-x-2 group-data-dragging:translate-y-2",
-  "top-3 right-3 rounded-tr-md border-t-2 border-r-2 group-data-dragging:-translate-x-2 group-data-dragging:translate-y-2",
-  "bottom-3 left-3 rounded-bl-md border-b-2 border-l-2 group-data-dragging:translate-x-2 group-data-dragging:-translate-y-2",
-  "bottom-3 right-3 rounded-br-md border-b-2 border-r-2 group-data-dragging:-translate-x-2 group-data-dragging:-translate-y-2",
-];
+// The booth's instruction panel. Same order as the editor's numbered sections.
+const STEPS = ["Add a photo", "Pick the size", "Frame your face", "Download"];
+const PROMISES = ["Free", "No sign-up", "No watermark", "Never uploaded"];
 
-const iconButtonClass =
-  "inline-flex size-9 items-center justify-center rounded-lg text-muted transition duration-200 hover:bg-sunken hover:text-foreground active:scale-95";
+// Outlines in the size registry are drawn at this many px per mm, so they compare at true scale.
+const REGISTRY_SCALE = 1.1;
+const RAIL_SCALE = 0.62;
 
-function segmentClass(active: boolean) {
-  return `rounded-[7px] px-2.5 py-1.5 text-xs font-medium whitespace-nowrap transition duration-200 active:scale-[0.97] ${
-    active ? "bg-surface text-foreground shadow-segment" : "text-muted hover:text-foreground"
-  }`;
+function segmentClass(active: boolean, onDark = false) {
+  const base =
+    "rounded-md px-3 py-1.5 text-[13px] font-semibold whitespace-nowrap transition duration-200 active:scale-[0.97]";
+  if (onDark) {
+    return `${base} ${active ? "bg-booth text-ink shadow-key" : "text-stage-muted hover:text-stage-text"}`;
+  }
+  return `${base} ${active ? "bg-ink text-booth shadow-key" : "text-muted hover:text-ink"}`;
+}
+
+function StepDisc({ step }: { step: number }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="figures flex size-7 shrink-0 items-center justify-center rounded-full bg-ink text-[15px] leading-none text-booth"
+    >
+      {step}
+    </span>
+  );
 }
 
 function StepHeading({
   step,
   id,
+  onDark = false,
   children,
 }: {
-  step: string;
+  step: number;
   id: string;
+  onDark?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <h2 id={id} className="flex items-baseline gap-2.5 text-sm font-semibold tracking-tight">
-      <span aria-hidden="true" className="font-mono text-[11px] font-normal text-faint tabular-nums">
-        {step}
-      </span>
-      {children}
+    <h2 id={id} className="flex items-center gap-3">
+      {onDark ? (
+        <span
+          aria-hidden="true"
+          className="figures flex size-7 shrink-0 items-center justify-center rounded-full bg-booth text-[15px] leading-none text-ink"
+        >
+          {step}
+        </span>
+      ) : (
+        <StepDisc step={step} />
+      )}
+      <span className="signage text-[22px]">{children}</span>
     </h2>
   );
 }
@@ -96,7 +126,7 @@ function PixelInput({
 }) {
   return (
     <label className="flex min-w-0 flex-1 flex-col gap-1.5">
-      <span className="text-xs text-muted">{label}</span>
+      <span className="text-xs font-medium text-muted">{label}</span>
       <span className="relative">
         <input
           type="number"
@@ -104,17 +134,82 @@ function PixelInput({
           inputMode="numeric"
           value={value || ""}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full [appearance:textfield] rounded-lg border border-border-strong bg-surface py-2 pr-9 pl-3 font-mono text-sm tabular-nums transition-[border-color,box-shadow] duration-200 hover:border-faint focus:border-accent focus:ring-3 focus:ring-accent/15 focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          className="w-full [appearance:textfield] rounded-lg border border-rule-strong bg-surface py-2.5 pr-9 pl-3 text-[15px] font-semibold tabular-nums transition-[border-color,box-shadow] duration-200 hover:border-faint focus:border-ink focus:ring-3 focus:ring-booth focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-3 flex items-center font-mono text-xs text-faint"
+          className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-faint"
         >
           px
         </span>
       </span>
     </label>
   );
+}
+
+// Wide shapes like a signature are capped at this width, so the guide fits a phone screen.
+const FRAME_MAX_WIDTH = 260;
+
+/** Dashed framing guide at the chosen print shape, with a head-and-shoulders silhouette or a pen stroke. */
+function FrameGuide({
+  aspect,
+  caption,
+  signature = false,
+  maxHeight = 150,
+}: {
+  aspect: number;
+  caption: string;
+  signature?: boolean;
+  maxHeight?: number;
+}) {
+  const height = Math.min(maxHeight, Math.round(FRAME_MAX_WIDTH / aspect));
+  return (
+    <span className="flex flex-col items-center gap-3">
+      <span
+        className="relative block overflow-hidden rounded-[3px] border-2 border-dashed border-booth/75 transition-[width,height] duration-500 ease-mech"
+        style={{ width: Math.round(height * aspect), height }}
+      >
+        {signature ? (
+          <svg
+            viewBox="0 0 120 40"
+            aria-hidden="true"
+            focusable="false"
+            className="absolute inset-0 size-full text-stage-line"
+          >
+            <path
+              d="M14 27C22 4 31 4 34 25S47 9 56 22 75 12 82 21 98 26 106 14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+            />
+          </svg>
+        ) : (
+          <svg
+            viewBox="0 0 40 40"
+            preserveAspectRatio="xMidYMax meet"
+            aria-hidden="true"
+            focusable="false"
+            className="absolute inset-x-0 bottom-0 h-[80%] w-full text-stage-line"
+          >
+            <circle cx="20" cy="15" r="7.5" fill="currentColor" />
+            <path d="M5.5 40C5.5 30.5 11.5 26 20 26S34.5 30.5 34.5 40Z" fill="currentColor" />
+          </svg>
+        )}
+      </span>
+      <span className="text-xs font-semibold text-booth tabular-nums">{caption}</span>
+    </span>
+  );
+}
+
+/** Text for the Other field: a typed limit, or empty when a one-tap choice (or none) is on. */
+function customLimitText(kb: number | null) {
+  return kb && !LIMIT_CHOICES.includes(kb) ? String(kb) : "";
+}
+
+function presetCaption(preset: FormPreset | undefined, maxKb?: number | null) {
+  if (preset) return `${preset.spec.replace("×", " × ")} · ${preset.width} × ${preset.height} px`;
+  return maxKb ? `Any size · under ${maxKb} KB` : "Any size";
 }
 
 function subscribeNoop() {
@@ -153,12 +248,15 @@ export default function PhotoEditor({
   titleAccent,
   intro,
   presetSlug,
+  maxKb: initialMaxKb,
 }: {
   title: string;
   titleAccent: string;
   intro: string;
   /** Preset applied to every photo loaded on this page, for the per-size guide pages. */
   presetSlug?: string;
+  /** File size limit the editor starts with, for the per-limit guide pages. */
+  maxKb?: number;
 }) {
   const initialPreset = presetSlug ? getPreset(presetSlug) : undefined;
 
@@ -169,6 +267,10 @@ export default function PhotoEditor({
   const streamRef = useRef<MediaStream | null>(null);
   const captureButtonRef = useRef<HTMLButtonElement>(null);
   const ratioRef = useRef(1);
+  const downloadRef = useRef<HTMLButtonElement>(null);
+
+  // The size picked in the registry, applied to the next photo that loads.
+  const [chosenPreset, setChosenPreset] = useState<FormPreset | undefined>(initialPreset);
 
   const [file, setFile] = useState<File | null>(null);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
@@ -188,14 +290,33 @@ export default function PhotoEditor({
   const [lockAspect, setLockAspect] = useState(true);
 
   // Upload portals almost always require JPEG, so presets default to it.
-  const [format, setFormat] = useState<ExportFormat>(initialPreset ? "jpeg" : "png");
+  const [format, setFormat] = useState<ExportFormat>(
+    initialPreset || initialMaxKb ? "jpeg" : "png"
+  );
   const [quality, setQuality] = useState(0.9);
+  // File size limit in KB. While one is set, the JPEG quality is chosen to fit it.
+  const [maxKb, setMaxKb] = useState<number | null>(initialMaxKb ?? initialPreset?.maxKb ?? null);
+  // Kept apart from maxKb so typing 200 doesn't clear the field when it passes through 20.
+  const [customKb, setCustomKb] = useState(() => customLimitText(maxKb));
+  const [fit, setFit] = useState<{ quality: number; status: FitStatus } | null>(null);
+  const limitBytes = format === "jpeg" && maxKb ? maxKb * BYTES_PER_KB : null;
+  // The preset's minimum holds while the output keeps the preset's shape. A new shape is a
+  // different upload, like a signature cropped on the photo page, with limits of its own.
+  const minKb =
+    chosenPreset?.minKb &&
+    targetHeight > 0 &&
+    Math.abs(targetWidth / targetHeight - chosenPreset.width / chosenPreset.height) < SHAPE_TOLERANCE
+      ? chosenPreset.minKb
+      : null;
+  const minBytes = format === "jpeg" && minKb ? minKb * MIN_BYTES_PER_KB : null;
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewSize, setPreviewSize] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  // Phones get a sticky download bar while the panel's own Download button is off screen.
+  const [downloadInView, setDownloadInView] = useState(true);
 
   const canShareFiles = useSyncExternalStore(
     subscribeNoop,
@@ -210,6 +331,8 @@ export default function PhotoEditor({
     }
     if (completedCrop.width <= 0 || completedCrop.height <= 0) return;
 
+    // Fitting a limit takes several encodes, so a newer change can finish first.
+    let cancelled = false;
     const timeout = setTimeout(async () => {
       try {
         const canvas = drawCroppedCanvas(
@@ -218,23 +341,33 @@ export default function PhotoEditor({
           targetWidth,
           targetHeight
         );
-        const blob = await canvasToBlob(canvas, format, quality);
-        if (!blob) {
+        const encoded = await encodeCanvas(canvas, format, quality, {
+          min: minBytes,
+          max: limitBytes,
+        });
+        if (cancelled) return;
+        if (!encoded) {
           setError("Could not generate a preview for this image.");
           return;
         }
         setPreviewUrl((prev) => {
           if (prev) URL.revokeObjectURL(prev);
-          return URL.createObjectURL(blob);
+          return URL.createObjectURL(encoded.blob);
         });
-        setPreviewSize(blob.size);
+        setPreviewSize(encoded.blob.size);
+        setFit(
+          limitBytes || minBytes ? { quality: encoded.quality, status: encoded.status } : null
+        );
       } catch {
-        setError("Could not generate a preview for this image.");
+        if (!cancelled) setError("Could not generate a preview for this image.");
       }
     }, 150);
 
-    return () => clearTimeout(timeout);
-  }, [completedCrop, targetWidth, targetHeight, format, quality]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [completedCrop, targetWidth, targetHeight, format, quality, limitBytes, minBytes]);
 
   useEffect(() => {
     if (isCameraOpen && videoRef.current && streamRef.current) {
@@ -248,6 +381,14 @@ export default function PhotoEditor({
       streamRef.current?.getTracks().forEach((track) => track.stop());
     };
   }, []);
+
+  useEffect(() => {
+    const button = downloadRef.current;
+    if (!button) return;
+    const observer = new IntersectionObserver(([entry]) => setDownloadInView(entry.isIntersecting));
+    observer.observe(button);
+    return () => observer.disconnect();
+  }, [imageSrc]);
 
   async function openCamera() {
     setError(null);
@@ -324,7 +465,7 @@ export default function PhotoEditor({
     setOriginalDims(null);
     setCrop(undefined);
     setCompletedCrop(undefined);
-    setAspect(initialPreset?.aspect);
+    setAspect(chosenPreset?.aspect);
     setPreviewUrl(null);
     setPreviewSize(null);
   }
@@ -339,10 +480,10 @@ export default function PhotoEditor({
     const pixelCrop = convertToPixelCrop(initialCrop, img.width, img.height);
     setCompletedCrop(pixelCrop);
 
-    if (initialPreset && aspect === initialPreset.aspect) {
-      setTargetWidth(initialPreset.width);
-      setTargetHeight(initialPreset.height);
-      ratioRef.current = initialPreset.width / initialPreset.height;
+    if (chosenPreset && aspect === chosenPreset.aspect) {
+      setTargetWidth(chosenPreset.width);
+      setTargetHeight(chosenPreset.height);
+      ratioRef.current = chosenPreset.width / chosenPreset.height;
       return;
     }
 
@@ -364,12 +505,22 @@ export default function PhotoEditor({
     setCompletedCrop(convertToPixelCrop(newCrop, img.width, img.height));
   }
 
+  function choosePreset(preset: FormPreset | undefined) {
+    setChosenPreset(preset);
+    if (preset) {
+      setFormat("jpeg");
+      applyLimit(preset.maxKb ?? null);
+    }
+  }
+
   function handleFormPresetClick(preset: FormPreset) {
+    setChosenPreset(preset);
     handleAspectClick(preset.aspect);
     setTargetWidth(preset.width);
     setTargetHeight(preset.height);
     setLockAspect(true);
     setFormat("jpeg");
+    applyLimit(preset.maxKb ?? null);
     ratioRef.current = preset.width / preset.height;
   }
 
@@ -450,7 +601,52 @@ export default function PhotoEditor({
   async function exportBlob(): Promise<Blob | null> {
     if (!completedCrop || !imgRef.current || !targetWidth || !targetHeight) return null;
     const canvas = drawCroppedCanvas(imgRef.current, completedCrop, targetWidth, targetHeight);
-    return canvasToBlob(canvas, format, quality);
+    const encoded = await encodeCanvas(canvas, format, quality, { min: minBytes, max: limitBytes });
+    return encoded?.blob ?? null;
+  }
+
+  function applyLimit(kb: number | null) {
+    setMaxKb(kb);
+    setCustomKb(customLimitText(kb));
+  }
+
+  function handleLimitInput(raw: string) {
+    setCustomKb(raw);
+    const value = Math.round(Number(raw));
+    setMaxKb(value > 0 ? value : null);
+  }
+
+  // File size scales roughly with pixel count, so scale both sides by the square root of the overshoot.
+  async function shrinkToFit() {
+    if (!limitBytes || !completedCrop || !imgRef.current || !targetWidth || !targetHeight) return;
+    try {
+      const canvas = drawCroppedCanvas(imgRef.current, completedCrop, targetWidth, targetHeight);
+      const blob = await canvasToBlob(canvas, "jpeg", SHRINK_QUALITY);
+      if (!blob || blob.size <= limitBytes) return;
+      const scale = Math.sqrt(limitBytes / blob.size) * 0.95;
+      setTargetWidth(Math.max(1, Math.round(targetWidth * scale)));
+      setTargetHeight(Math.max(1, Math.round(targetHeight * scale)));
+    } catch {
+      setError("Could not resize this image. Try a smaller width and height.");
+    }
+  }
+
+  // The reverse of shrinkToFit: more pixels for a file that falls short of the form's minimum.
+  async function enlargeToFit() {
+    if (!minBytes || !completedCrop || !imgRef.current || !targetWidth || !targetHeight) return;
+    try {
+      const canvas = drawCroppedCanvas(imgRef.current, completedCrop, targetWidth, targetHeight);
+      const blob = await canvasToBlob(canvas, "jpeg", limitBytes ? TOP_QUALITY : quality);
+      if (!blob || blob.size >= minBytes) return;
+      const goal = limitBytes
+        ? Math.min(minBytes * ENLARGE_MARGIN, (minBytes + limitBytes) / 2)
+        : minBytes * ENLARGE_MARGIN;
+      const scale = Math.sqrt(goal / blob.size);
+      setTargetWidth(Math.ceil(targetWidth * scale));
+      setTargetHeight(Math.ceil(targetHeight * scale));
+    } catch {
+      setError("Could not resize this image. Try a larger width and height.");
+    }
   }
 
   async function handleDownload() {
@@ -501,6 +697,7 @@ export default function PhotoEditor({
     setTargetHeight(0);
     setPreviewUrl(null);
     setPreviewSize(null);
+    setFit(null);
     setError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
@@ -508,15 +705,15 @@ export default function PhotoEditor({
   const errorBanner = error && (
     <div
       role="alert"
-      className="flex items-start gap-3 rounded-xl border border-danger-border bg-danger-soft px-4 py-3 text-sm text-danger"
+      className="flex items-start gap-3 rounded-xl border border-curtain-line bg-curtain-soft px-4 py-3 text-sm text-curtain-ink"
     >
-      <AlertIcon className="mt-px size-4 shrink-0" />
+      <AlertIcon className="mt-px size-4 shrink-0 text-curtain" />
       <p className="flex-1 text-pretty">{error}</p>
       <button
         type="button"
         onClick={() => setError(null)}
         aria-label="Dismiss"
-        className="-m-1 rounded-md p-1 text-danger/70 transition duration-200 hover:bg-danger/10 hover:text-danger"
+        className="-m-1 rounded-md p-1 text-curtain-ink/70 transition duration-200 hover:bg-curtain/10 hover:text-curtain-ink"
       >
         <CloseIcon className="size-4" />
       </button>
@@ -524,296 +721,462 @@ export default function PhotoEditor({
   );
 
   const showSkeleton = !previewUrl && !!completedCrop && targetWidth > 0 && targetHeight > 0;
+  const formatLabel = format === "png" ? "PNG" : "JPEG";
+  const sizeLabel = previewSize !== null ? formatBytes(previewSize) : null;
 
   return (
     <>
-      <div className="flex flex-col gap-6">
-        {!imageSrc ? (
-          <section
-            aria-labelledby="hero-title"
-            className="relative isolate grid gap-x-16 gap-y-10 pt-6 sm:pt-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:pt-20"
-          >
-            <div
-              aria-hidden="true"
-              className="mat-grid pointer-events-none absolute inset-0 -z-10 mask-[radial-gradient(55%_65%_at_78%_45%,black,transparent)]"
-            />
+      {!imageSrc ? (
+        <section
+          aria-labelledby="hero-title"
+          className="grid gap-4 pt-4 sm:pt-6 lg:grid-cols-12 lg:gap-5 lg:pt-8"
+        >
+          <div className="flex flex-col gap-7 rounded-[22px] bg-booth p-6 text-ink sm:p-8 lg:col-span-5 lg:p-10">
+            <h1
+              id="hero-title"
+              className="signage text-[2.75rem] text-balance sm:text-6xl xl:text-[4.5rem]"
+            >
+              {title}
+              <span className="text-ink/55 normal-case">{titleAccent}</span>
+            </h1>
+            <p className="max-w-[46ch] text-[17px] leading-relaxed text-pretty text-ink/80">{intro}</p>
+            <ol aria-label="How it works" className="grid grid-cols-2 gap-x-4 gap-y-3 border-t-2 border-ink pt-5 lg:grid-cols-1 lg:pt-6">
+              {STEPS.map((step, index) => (
+                <li key={step} className="flex items-center gap-3.5">
+                  <StepDisc step={index + 1} />
+                  <span className="text-[15px] leading-tight font-semibold lg:text-[17px]">{step}</span>
+                </li>
+              ))}
+            </ol>
+            <ul
+              aria-label="What you get"
+              className="mt-auto flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold"
+            >
+              {PROMISES.map((promise) => (
+                <li key={promise} className="flex items-center gap-2">
+                  <span aria-hidden="true" className="size-1.5 bg-ink" />
+                  {promise}
+                </li>
+              ))}
+            </ul>
+          </div>
 
-            <div className="flex flex-col gap-6 lg:col-start-1 lg:row-start-1 lg:self-end">
-              <h1
-                id="hero-title"
-                className="animate-rise text-[2.6rem] leading-[1.02] font-semibold tracking-[-0.035em] text-balance sm:text-6xl"
+          <div className="flex min-w-0 flex-col gap-4 lg:col-span-7">
+            <div className="on-dark rounded-[22px] bg-stage p-2.5 text-stage-text shadow-panel">
+              <div
+                data-dragging={isDragging || undefined}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  validateAndLoadFile(e.dataTransfer.files[0]);
+                }}
+                onClick={(e) => {
+                  // A click on the empty stage opens the file picker, like the button does.
+                  if (e.target === e.currentTarget) fileInputRef.current?.click();
+                }}
+                className="relative flex min-h-[22rem] cursor-pointer flex-col items-center justify-center gap-6 rounded-2xl border border-dashed border-stage-line px-6 py-10 text-center transition-colors duration-200 hover:border-stage-muted data-dragging:border-booth data-dragging:bg-stage-raised sm:min-h-[26rem]"
               >
-                {title}
-                <span className="text-muted">{titleAccent}</span>
-              </h1>
-              <p className="animate-rise max-w-[52ch] text-[17px] leading-relaxed text-pretty text-muted [animation-delay:80ms]">
-                {intro}
-              </p>
-            </div>
-
-            <div className="animate-rise flex flex-col gap-3 [animation-delay:140ms] lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-center">
-              <div className="rounded-2xl border border-border bg-surface p-2 shadow-panel">
-                <label
-                  data-dragging={isDragging || undefined}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setIsDragging(true);
-                  }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setIsDragging(false);
-                    validateAndLoadFile(e.dataTransfer.files[0]);
-                  }}
-                  className="group relative flex min-h-72 cursor-pointer flex-col items-center justify-center gap-4 rounded-xl px-6 py-10 text-center transition-colors duration-200 *:pointer-events-none hover:bg-sunken/50 has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-accent data-dragging:bg-accent-soft"
-                >
-                  {DROPZONE_CORNERS.map((corner) => (
-                    <span
-                      key={corner}
-                      aria-hidden="true"
-                      className={`absolute size-6 border-border-strong transition-[translate,border-color] duration-300 ease-out group-hover:border-accent group-data-dragging:border-accent ${corner}`}
-                    />
-                  ))}
-                  <span className="flex size-12 items-center justify-center rounded-xl bg-sunken ring-1 ring-border ring-inset transition duration-300 group-hover:-translate-y-0.5 group-data-dragging:bg-surface group-data-dragging:text-accent-ink">
-                    <ImageIcon className="size-6" />
-                  </span>
-                  <span className="flex flex-col gap-1">
-                    <span className="text-base font-medium">
+                <span className="pointer-events-none flex flex-col items-center gap-6">
+                  <FrameGuide
+                    aspect={chosenPreset?.aspect ?? 4 / 5}
+                    caption={presetCaption(chosenPreset, maxKb)}
+                    signature={chosenPreset?.kind === "signature"}
+                  />
+                  <span className="flex flex-col gap-1.5">
+                    <span className="signage text-[2rem]">
                       {isDragging ? "Release to load your photo" : "Drop a photo here"}
                     </span>
-                    <span className="text-sm text-muted">
-                      or{" "}
-                      <span className="font-medium text-accent-ink underline decoration-accent/40 underline-offset-4 transition-colors group-hover:decoration-accent">
-                        browse your files
-                      </span>
-                    </span>
+                    <span className="text-sm text-stage-muted">JPG, PNG or WEBP, up to 20 MB</span>
                   </span>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className="sr-only"
-                    onChange={(e) => validateAndLoadFile(e.target.files?.[0])}
-                  />
-                </label>
-
-                <div className="flex flex-wrap items-center justify-between gap-2 px-1 pt-2">
+                </span>
+                <span className="flex flex-wrap items-center justify-center gap-2.5">
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-booth px-5 py-3 text-[15px] font-bold text-ink shadow-key transition duration-200 hover:bg-booth-deep active:scale-[0.98] has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-booth">
+                    <ImageIcon className="size-4.5" />
+                    Choose photo
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="sr-only"
+                      onChange={(e) => validateAndLoadFile(e.target.files?.[0])}
+                    />
+                  </label>
                   <button
                     type="button"
                     onClick={openCamera}
-                    className="inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm font-medium text-foreground/80 transition duration-200 hover:bg-sunken hover:text-foreground active:scale-[0.98]"
+                    className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-[15px] font-bold text-stage-text ring-2 ring-booth transition duration-200 ring-inset hover:bg-stage-raised active:scale-[0.98]"
                   >
-                    <CameraIcon className="size-4" />
+                    <CameraIcon className="size-4.5 text-booth" />
                     Use camera
                   </button>
-                  <span className="px-2.5 font-mono text-[11px] text-muted">
-                    JPG, PNG, WEBP · up to {formatBytes(MAX_FILE_SIZE)}
-                  </span>
-                </div>
+                </span>
               </div>
-              {errorBanner}
+              <p className="flex items-center justify-center gap-1.5 px-3 pt-2.5 pb-1 text-xs text-stage-muted">
+                <LockIcon className="size-3.5 text-booth" />
+                Your photo stays on this device. Nothing is uploaded.
+              </p>
             </div>
 
-            <dl className="animate-rise grid max-w-lg border-t border-border text-sm [animation-delay:200ms] lg:col-start-1 lg:row-start-2 lg:self-start">
-              {HIGHLIGHTS.map(({ term, detail }) => (
-                <div
-                  key={term}
-                  className="grid grid-cols-[6rem_1fr] gap-4 border-b border-border py-3"
-                >
-                  <dt className="font-mono text-xs leading-5 text-muted">{term}</dt>
-                  <dd className="text-pretty text-foreground/85">{detail}</dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-        ) : (
-          <>
-            <h1 className="sr-only">Edit photo</h1>
             {errorBanner}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8">
-              <section aria-label="Crop" className="flex min-w-0 flex-col gap-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div
-                    role="group"
-                    aria-label="Aspect ratio"
-                    className="inline-flex max-w-full overflow-x-auto rounded-[9px] bg-sunken p-0.5 ring-1 ring-border ring-inset"
+
+            <div className="rounded-[22px] border border-rule bg-surface p-5 shadow-panel sm:p-6">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <h2 id="registry-heading" className="signage text-[22px]">
+                  Pick the size
+                </h2>
+                <p className="text-sm text-muted">You can change it after adding the photo.</p>
+              </div>
+              <div
+                role="group"
+                aria-labelledby="registry-heading"
+                className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3"
+              >
+                {[...FORM_PRESETS, undefined].map((preset) => {
+                  const active = chosenPreset?.slug === preset?.slug;
+                  return (
+                    <button
+                      key={preset?.slug ?? "custom"}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => choosePreset(preset)}
+                      className={`flex flex-col gap-3 rounded-xl p-3 text-left transition duration-200 active:scale-[0.98] ${
+                        active
+                          ? "on-dark bg-ink text-stage-text"
+                          : "bg-ground/60 ring-1 ring-rule ring-inset hover:bg-ground hover:ring-rule-strong"
+                      }`}
+                    >
+                      <span className="flex h-15 items-end">
+                        {preset ? (
+                          <PresetOutline
+                            preset={preset}
+                            scale={REGISTRY_SCALE}
+                            className={active ? "text-booth" : "text-ink"}
+                          />
+                        ) : (
+                          <span
+                            aria-hidden="true"
+                            className={`block h-11 w-14 rounded-[2px] border-[1.5px] border-dashed ${
+                              active ? "border-booth" : "border-ink/60"
+                            }`}
+                          />
+                        )}
+                      </span>
+                      <span className="flex flex-col gap-0.5">
+                        <span className="text-sm leading-snug font-semibold">
+                          {preset ? preset.name : "Custom size"}
+                        </span>
+                        <span
+                          className={`flex flex-col text-xs tabular-nums ${active ? "text-stage-muted" : "text-muted"}`}
+                        >
+                          {preset ? (
+                            <>
+                              <span>{preset.spec}</span>
+                              <span>
+                                {preset.width} × {preset.height} px
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Any width × height</span>
+                              <span>Set in pixels</span>
+                            </>
+                          )}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <>
+          <h1 className="sr-only">Edit photo</h1>
+          {errorBanner && <div className="pt-4">{errorBanner}</div>}
+          <div className="grid grid-cols-1 pt-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:grid-rows-[auto_auto_1fr] lg:gap-x-5">
+            <section
+              aria-labelledby="size-heading"
+              className="mb-4 flex flex-col gap-4 rounded-[22px] bg-booth p-5 text-ink lg:col-start-2 lg:row-start-2 lg:mb-0 lg:rounded-b-none"
+            >
+              <StepHeading step={2} id="size-heading">
+                Pick the size
+              </StepHeading>
+
+              <div role="group" aria-label="Form and ID presets" className="grid grid-cols-3 gap-1.5">
+                {FORM_PRESETS.map((preset) => {
+                  const active =
+                    aspect === preset.aspect &&
+                    targetWidth === preset.width &&
+                    targetHeight === preset.height;
+                  return (
+                    <button
+                      key={preset.slug}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => handleFormPresetClick(preset)}
+                      className={`flex flex-col gap-2 rounded-lg p-2 text-left transition duration-200 active:scale-[0.98] ${
+                        active ? "on-dark bg-ink text-stage-text" : "ring-1 ring-ink/20 ring-inset hover:bg-ink/8"
+                      }`}
+                    >
+                      <span className="flex h-8 items-end">
+                        <PresetOutline
+                          preset={preset}
+                          scale={RAIL_SCALE}
+                          className={active ? "text-booth" : "text-ink"}
+                        />
+                      </span>
+                      <span className="flex min-w-0 flex-col">
+                        <span className="text-[13px] leading-tight font-semibold">{preset.name}</span>
+                        <span
+                          className={`mt-0.5 text-[11px] tabular-nums ${active ? "text-stage-muted" : "text-ink/70"}`}
+                        >
+                          {preset.width} × {preset.height} px
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex flex-col gap-2 border-t border-ink/25 pt-3">
+                <div className="flex items-end gap-2">
+                  <PixelInput label="Width in pixels" value={targetWidth} onChange={handleWidthChange} />
+                  <button
+                    type="button"
+                    onClick={toggleLockAspect}
+                    aria-pressed={lockAspect}
+                    aria-label="Lock aspect ratio"
+                    title={lockAspect ? "Aspect ratio locked" : "Aspect ratio unlocked"}
+                    className={`inline-flex size-11 shrink-0 items-center justify-center rounded-lg border transition duration-200 active:scale-95 ${
+                      lockAspect
+                        ? "border-ink bg-ink text-booth"
+                        : "border-ink/40 bg-surface/60 text-ink/70 hover:bg-surface hover:text-ink"
+                    }`}
                   >
-                    {ASPECT_PRESETS.map((preset) => (
+                    {lockAspect ? <LockIcon className="size-4" /> : <LockOpenIcon className="size-4" />}
+                  </button>
+                  <PixelInput label="Height in pixels" value={targetHeight} onChange={handleHeightChange} />
+                </div>
+              </div>
+            </section>
+
+            <div className="on-dark flex flex-wrap items-center gap-x-4 gap-y-3 rounded-t-[22px] bg-ink px-4 py-2.5 text-stage-text lg:col-span-2 lg:row-start-1 lg:mb-4 lg:rounded-[22px]">
+              <StepHeading step={3} id="frame-heading" onDark>
+                Frame your face
+              </StepHeading>
+              <div className="flex max-w-full items-center gap-1.5">
+                <div
+                  role="group"
+                  aria-label="Aspect ratio"
+                  className="inline-flex max-w-full overflow-x-auto rounded-lg bg-stage-raised p-1 ring-1 ring-stage-line ring-inset"
+                >
+                  {ASPECT_PRESETS.map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      aria-pressed={aspect === preset.value}
+                      onClick={() => handleAspectClick(preset.value)}
+                      className={segmentClass(aspect === preset.value, true)}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => rotateBy(-90)}
+                  aria-label="Rotate left 90°"
+                  title="Rotate left 90°"
+                  className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-stage-muted transition duration-200 hover:bg-stage-raised hover:text-stage-text active:scale-95"
+                >
+                  <RotateLeftIcon className="size-4.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => rotateBy(90)}
+                  aria-label="Rotate right 90°"
+                  title="Rotate right 90°"
+                  className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-stage-muted transition duration-200 hover:bg-stage-raised hover:text-stage-text active:scale-95"
+                >
+                  <RotateRightIcon className="size-4.5" />
+                </button>
+              </div>
+              {originalDims && file && (
+                <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-stage-muted tabular-nums lg:ml-auto">
+                  <span className="max-w-[24ch] truncate text-stage-text">{file.name}</span>
+                  <span>
+                    {originalDims.width} × {originalDims.height} px
+                  </span>
+                  <span>{formatBytes(file.size)}</span>
+                  {rotation !== 0 && <span>Rotated {rotation}°</span>}
+                </p>
+              )}
+            </div>
+
+            <section
+              aria-labelledby="frame-heading"
+              className="on-dark mb-4 flex min-w-0 items-center justify-center rounded-b-[22px] lg:sticky lg:top-4 lg:self-start bg-stage p-4 text-stage-text lg:col-start-1 lg:row-span-2 lg:row-start-2 lg:mb-0 lg:rounded-[22px] sm:p-8"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img ref={originalImgRef} src={imageSrc ?? undefined} alt="" className="hidden" aria-hidden="true" />
+              <ReactCrop
+                crop={crop}
+                onChange={(_, percentCrop) => setCrop(percentCrop)}
+                onComplete={(c) => setCompletedCrop(c)}
+                aspect={aspect}
+                minWidth={10}
+                minHeight={10}
+                ruleOfThirds
+                // The library's stylesheet makes the image inherit max-height from this container.
+                style={{ maxHeight: "min(64dvh, 36rem)" }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  ref={imgRef}
+                  src={rotatedSrc ?? imageSrc}
+                  alt="Uploaded image to crop"
+                  onLoad={onImageLoad}
+                  onError={() => setError("This file could not be read as an image.")}
+                  className="max-h-[min(64dvh,36rem)] max-w-full"
+                />
+              </ReactCrop>
+            </section>
+
+            <section
+              aria-labelledby="download-heading"
+              className="flex flex-col gap-4 rounded-[22px] bg-booth p-5 text-ink lg:col-start-2 lg:row-start-3 lg:rounded-t-none lg:shadow-[inset_0_2px_0_var(--ink)]"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <StepHeading step={4} id="download-heading">
+                  Download
+                </StepHeading>
+                <div
+                    role="group"
+                    aria-label="Export format"
+                    className="inline-flex rounded-lg bg-ink/10 p-1 ring-1 ring-ink/20 ring-inset"
+                  >
+                    {(["jpeg", "png"] as ExportFormat[]).map((f) => (
                       <button
-                        key={preset.label}
+                        key={f}
                         type="button"
-                        aria-pressed={aspect === preset.value}
-                        onClick={() => handleAspectClick(preset.value)}
-                        className={`font-mono ${segmentClass(aspect === preset.value)}`}
+                        aria-pressed={format === f}
+                        onClick={() => setFormat(f)}
+                        className={`min-w-16 ${segmentClass(format === f)} ${format === f ? "" : "text-ink/70"}`}
                       >
-                        {preset.label}
+                        {f === "png" ? "PNG" : "JPEG"}
                       </button>
                     ))}
                   </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => rotateBy(-90)}
-                      aria-label="Rotate left 90°"
-                      title="Rotate left 90°"
-                      className={iconButtonClass}
-                    >
-                      <RotateLeftIcon className="size-4.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => rotateBy(90)}
-                      aria-label="Rotate right 90°"
-                      title="Rotate right 90°"
-                      className={iconButtonClass}
-                    >
-                      <RotateRightIcon className="size-4.5" />
-                    </button>
-                  </div>
-                </div>
+              </div>
 
-                <div className="mat-grid flex justify-center rounded-2xl border border-border bg-sunken p-4 sm:p-8">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img ref={originalImgRef} src={imageSrc ?? undefined} alt="" className="hidden" aria-hidden="true" />
-                  <ReactCrop
-                    crop={crop}
-                    onChange={(_, percentCrop) => setCrop(percentCrop)}
-                    onComplete={(c) => setCompletedCrop(c)}
-                    aspect={aspect}
-                    minWidth={10}
-                    minHeight={10}
-                    ruleOfThirds
-                    className="shadow-photo"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      ref={imgRef}
-                      src={rotatedSrc ?? imageSrc}
-                      alt="Uploaded image to crop"
-                      onLoad={onImageLoad}
-                      onError={() => setError("This file could not be read as an image.")}
-                      className="max-h-[62dvh] max-w-full"
-                    />
-                  </ReactCrop>
-                </div>
-
-                {originalDims && file && (
-                  <p className="flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs text-muted tabular-nums">
-                    <span className="max-w-[28ch] truncate text-foreground/80">{file.name}</span>
-                    <span>
-                      {originalDims.width} × {originalDims.height} px
-                    </span>
-                    <span>{formatBytes(file.size)}</span>
-                    {rotation !== 0 && <span>Rotated {rotation}°</span>}
-                  </p>
-                )}
-              </section>
-
-              <aside
-                aria-label="Export settings"
-                className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start"
-              >
-                <div className="divide-y divide-border rounded-2xl border border-border bg-surface shadow-panel">
-                  <section aria-labelledby="size-heading" className="flex flex-col gap-4 p-5">
-                    <StepHeading step="01" id="size-heading">
-                      Output size
-                    </StepHeading>
-
-                    <div className="flex flex-col gap-1.5">
-                      <p className="text-xs text-muted">Form &amp; ID presets</p>
-                      <div role="group" aria-label="Form and ID presets" className="-mx-2 flex flex-col">
-                        {FORM_PRESETS.map((preset) => {
-                          const active =
-                            aspect === preset.aspect &&
-                            targetWidth === preset.width &&
-                            targetHeight === preset.height;
-                          return (
+              <div className="flex flex-col gap-3">
+                {format === "jpeg" ? (
+                  <>
+                    <div className="flex flex-col gap-2">
+                      <span id="limit-label" className="text-xs font-semibold text-ink/75">
+                        Max file size
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <div
+                          role="group"
+                          aria-labelledby="limit-label"
+                          className="inline-flex rounded-lg bg-ink/10 p-1 ring-1 ring-ink/20 ring-inset"
+                        >
+                          {[null, ...LIMIT_CHOICES].map((kb) => (
                             <button
-                              key={preset.name}
+                              key={kb ?? "any"}
                               type="button"
-                              aria-pressed={active}
-                              onClick={() => handleFormPresetClick(preset)}
-                              className={`group flex items-center justify-between gap-3 rounded-lg px-2 py-2 text-left text-sm transition duration-200 ${
-                                active ? "bg-accent-soft" : "hover:bg-sunken"
-                              }`}
+                              aria-pressed={maxKb === kb}
+                              onClick={() => applyLimit(kb)}
+                              className={`${segmentClass(maxKb === kb)} ${maxKb === kb ? "" : "text-ink/70"}`}
                             >
-                              <span className="flex min-w-0 items-center gap-2.5">
-                                <span
-                                  aria-hidden="true"
-                                  className={`flex size-3.5 shrink-0 items-center justify-center rounded-full border transition duration-200 ${
-                                    active ? "border-accent" : "border-border-strong group-hover:border-faint"
-                                  }`}
-                                >
-                                  <span
-                                    className={`size-1.5 rounded-full bg-accent transition duration-200 ${
-                                      active ? "scale-100" : "scale-0"
-                                    }`}
-                                  />
-                                </span>
-                                <span className="font-medium">{preset.name}</span>
-                                <span className="truncate text-muted">{preset.spec}</span>
-                              </span>
-                              <span className="font-mono text-xs text-muted tabular-nums">
-                                {preset.width}×{preset.height}
-                              </span>
+                              {kb ? `${kb} KB` : "Any"}
                             </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="flex items-end gap-2">
-                      <PixelInput label="Width" value={targetWidth} onChange={handleWidthChange} />
-                      <button
-                        type="button"
-                        onClick={toggleLockAspect}
-                        aria-pressed={lockAspect}
-                        aria-label="Lock aspect ratio"
-                        title={lockAspect ? "Aspect ratio locked" : "Aspect ratio unlocked"}
-                        className={`inline-flex size-9.5 shrink-0 items-center justify-center rounded-lg border transition duration-200 active:scale-95 ${
-                          lockAspect
-                            ? "border-accent/30 bg-accent-soft text-accent-ink"
-                            : "border-border-strong text-muted hover:bg-sunken hover:text-foreground"
-                        }`}
-                      >
-                        {lockAspect ? (
-                          <LockIcon className="size-4" />
-                        ) : (
-                          <LockOpenIcon className="size-4" />
-                        )}
-                      </button>
-                      <PixelInput label="Height" value={targetHeight} onChange={handleHeightChange} />
-                    </div>
-                  </section>
-
-                  <section aria-labelledby="format-heading" className="flex flex-col gap-4 p-5">
-                    <div className="flex items-center justify-between gap-3">
-                      <StepHeading step="02" id="format-heading">
-                        Format
-                      </StepHeading>
-                      <div
-                        role="group"
-                        aria-label="Export format"
-                        className="inline-flex rounded-[9px] bg-sunken p-0.5 ring-1 ring-border ring-inset"
-                      >
-                        {(["png", "jpeg"] as ExportFormat[]).map((f) => (
-                          <button
-                            key={f}
-                            type="button"
-                            aria-pressed={format === f}
-                            onClick={() => setFormat(f)}
-                            className={`min-w-14 font-mono uppercase ${segmentClass(format === f)}`}
+                          ))}
+                        </div>
+                        <label className="relative min-w-0 flex-1">
+                          <span className="sr-only">Other limit in KB</span>
+                          <input
+                            type="number"
+                            min={1}
+                            inputMode="numeric"
+                            placeholder="Other"
+                            value={customKb}
+                            onChange={(e) => handleLimitInput(e.target.value)}
+                            className="w-full [appearance:textfield] rounded-lg border border-ink/40 bg-surface/60 py-2 pr-8 pl-2.5 text-[13px] font-semibold tabular-nums transition-[border-color,box-shadow] duration-200 placeholder:font-normal placeholder:text-ink/60 hover:border-ink/60 focus:border-ink focus:bg-surface focus:ring-3 focus:ring-ink/20 focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                          />
+                          <span
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-xs text-ink/60"
                           >
-                            {f}
-                          </button>
-                        ))}
+                            KB
+                          </span>
+                        </label>
                       </div>
                     </div>
-                    {format === "jpeg" ? (
+
+                    {fit && fit.status !== "fits" ? (
+                      <div
+                        role="status"
+                        className="flex items-start gap-2.5 rounded-lg bg-ink/8 p-3 text-xs leading-relaxed text-pretty"
+                      >
+                        <AlertIcon className="mt-px size-4 shrink-0" />
+                        <div className="flex flex-col items-start gap-2">
+                          {fit.status === "too-big" ? (
+                            <p>
+                              <span className="font-semibold">
+                                Too big for {maxKb} KB at {targetWidth} × {targetHeight} px.
+                              </span>{" "}
+                              Fewer pixels make a smaller file.
+                            </p>
+                          ) : (
+                            <p>
+                              <span className="font-semibold">
+                                Under the {minKb} KB minimum at {targetWidth} × {targetHeight} px.
+                              </span>{" "}
+                              {maxKb
+                                ? "More pixels make a bigger file."
+                                : "Raise the quality, or add pixels for a bigger file."}
+                            </p>
+                          )}
+                          <button
+                            type="button"
+                            onClick={fit.status === "too-big" ? shrinkToFit : enlargeToFit}
+                            className="rounded-md bg-ink px-3 py-1.5 text-[13px] font-semibold text-booth transition duration-200 hover:bg-ink-soft active:scale-[0.97]"
+                          >
+                            {fit.status === "too-big" ? "Shrink to fit" : "Enlarge to fit"}
+                          </button>
+                        </div>
+                      </div>
+                    ) : maxKb ? (
+                      <p role="status" className="text-xs text-pretty text-ink/75">
+                        {fit ? (
+                          <>
+                            Quality set to{" "}
+                            <span className="font-bold text-ink tabular-nums">
+                              {Math.round(fit.quality * 100)}%
+                            </span>{" "}
+                            {minKb
+                              ? `to stay between ${minKb} and ${maxKb} KB.`
+                              : `to stay under ${maxKb} KB.`}
+                          </>
+                        ) : (
+                          <>Quality is set automatically to stay under {maxKb} KB.</>
+                        )}
+                      </p>
+                    ) : null}
+
+                    {!maxKb && (
                       <label className="flex flex-col gap-2">
-                        <span className="flex items-center justify-between text-xs text-muted">
+                        <span className="flex items-center justify-between gap-3 text-xs font-semibold text-ink/75">
                           Quality
-                          <span className="font-mono text-foreground tabular-nums">
+                          <span className="text-sm font-bold text-ink tabular-nums">
                             {Math.round(quality * 100)}%
                           </span>
                         </span>
@@ -824,95 +1187,125 @@ export default function PhotoEditor({
                           step={0.05}
                           value={quality}
                           onChange={(e) => setQuality(Number(e.target.value))}
-                          className="w-full accent-accent"
+                          className="w-full"
                         />
                       </label>
-                    ) : (
-                      <p className="text-xs text-pretty text-muted">
-                        Lossless. Switch to JPEG if the form asks for a smaller file.
-                      </p>
                     )}
-                  </section>
-
-                  <section aria-labelledby="preview-heading" className="flex flex-col gap-3 p-5">
-                    <div className="flex items-baseline justify-between gap-3">
-                      <StepHeading step="03" id="preview-heading">
-                        Preview
-                      </StepHeading>
-                      <span className="font-mono text-xs text-muted tabular-nums">
-                        {targetWidth} × {targetHeight} px
-                      </span>
-                    </div>
-                    <div className="checker flex min-h-40 items-center justify-center overflow-hidden rounded-lg p-3 ring-1 ring-border ring-inset">
-                      {previewUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={previewUrl}
-                          alt="Cropped and resized preview"
-                          className="max-h-52 max-w-full shadow-photo"
-                        />
-                      ) : showSkeleton ? (
-                        <div
-                          aria-hidden="true"
-                          className="skeleton h-36 max-w-full animate-shimmer rounded"
-                          style={{ aspectRatio: `${targetWidth} / ${targetHeight}` }}
-                        />
-                      ) : (
-                        <span className="text-sm text-muted">Adjust the crop to see a preview</span>
-                      )}
-                    </div>
-                  </section>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <button
-                    type="button"
-                    onClick={handleDownload}
-                    disabled={!previewUrl}
-                    className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-foreground px-4 py-3 text-sm font-medium text-background shadow-button transition duration-200 hover:bg-ink-hover active:scale-[0.99] disabled:pointer-events-none disabled:opacity-40"
-                  >
-                    <DownloadIcon className="size-4 transition duration-200 group-hover:translate-y-px" />
-                    Download {format === "png" ? "PNG" : "JPEG"}
-                    {previewSize !== null && (
-                      <span className="font-mono text-xs text-background/55 tabular-nums">
-                        ~{formatBytes(previewSize)}
-                      </span>
-                    )}
-                  </button>
-                  <div className="flex items-center gap-2">
-                    {canShareFiles && (
-                      <button
-                        type="button"
-                        onClick={handleShare}
-                        disabled={!previewUrl}
-                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border-strong bg-surface px-4 py-2.5 text-sm font-medium transition duration-200 hover:bg-sunken active:scale-[0.99] disabled:pointer-events-none disabled:opacity-40"
-                      >
-                        <ShareIcon className="size-4" />
-                        Share
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleReset}
-                      className={`rounded-lg px-3 py-2.5 text-sm font-medium text-muted transition duration-200 hover:bg-sunken hover:text-foreground ${
-                        canShareFiles ? "" : "mx-auto"
-                      }`}
-                    >
-                      Start over
-                    </button>
-                  </div>
-                </div>
-                {canShareFiles && (
-                  <p className="text-xs leading-relaxed text-pretty text-muted">
-                    Apps like WhatsApp recompress photos sent via Share. For full quality, tap
-                    Download, then attach the file as a Document in the app instead.
+                  </>
+                ) : (
+                  <p className="text-xs text-pretty text-ink/75">
+                    Lossless. Switch to JPEG to set a file size limit, or if the form asks for a
+                    smaller file.
                   </p>
                 )}
-              </aside>
-            </div>
-          </>
-        )}
-      </div>
+              </div>
+
+              <div className="relative">
+                <div
+                  aria-hidden="true"
+                  className="relative z-10 h-5 rounded-[5px] bg-ink shadow-[inset_0_-4px_0_#000,inset_0_1px_0_rgb(255_255_255/0.12),0_1px_0_rgb(255_255_255/0.35)]"
+                />
+                <div className="-mt-2 flex min-h-40 justify-center overflow-hidden px-4 pb-2">
+                  {previewUrl ? (
+                    <figure key={imageSrc} className="relative flex h-fit w-min animate-deliver flex-col bg-surface p-2 pt-3.5 pb-0 shadow-print">
+                      {/* The slot's lip shadows the print's top edge as it comes out. */}
+                      <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-x-0 top-0 z-10 h-4 bg-linear-to-b from-black/30 to-transparent"
+                      />
+                      <div className={`animate-develop ${format === "png" ? "checker" : ""}`}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          key={previewUrl}
+                          src={previewUrl}
+                          alt="Cropped and resized preview"
+                          className="block h-32 w-auto max-w-none animate-refresh"
+                        />
+                      </div>
+                      <figcaption className="py-2 text-center text-[11px] leading-snug font-semibold text-balance text-ink-soft tabular-nums">
+                        {targetWidth} × {targetHeight} px · {formatLabel}
+                        {sizeLabel && ` · ${sizeLabel}`}
+                      </figcaption>
+                    </figure>
+                  ) : showSkeleton ? (
+                    <div className="flex h-fit flex-col bg-surface p-2 pt-3.5 shadow-print" aria-hidden="true">
+                      <div
+                        className="skeleton h-32 max-w-full animate-shimmer"
+                        style={{ aspectRatio: `${targetWidth} / ${targetHeight}` }}
+                      />
+                      <div className="h-7" />
+                    </div>
+                  ) : (
+                    <p className="pt-12 text-center text-sm text-pretty text-ink/75">
+                      Your print comes out here once the crop is set.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <button
+                  ref={downloadRef}
+                  type="button"
+                  onClick={handleDownload}
+                  disabled={!previewUrl}
+                  className="on-dark group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-ink px-4 py-3.5 text-[15px] font-bold text-booth shadow-key transition duration-200 hover:bg-ink-soft active:scale-[0.99] disabled:pointer-events-none disabled:opacity-45"
+                >
+                  <DownloadIcon className="size-4.5 transition duration-200 group-hover:translate-y-px" />
+                  Download {formatLabel}
+                  {sizeLabel && <span className="tabular-nums">· {sizeLabel}</span>}
+                </button>
+                <div className="flex items-center gap-2">
+                  {canShareFiles && (
+                    <button
+                      type="button"
+                      onClick={handleShare}
+                      disabled={!previewUrl}
+                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-ink/40 bg-surface/60 px-4 py-2.5 text-sm font-semibold transition duration-200 hover:bg-surface active:scale-[0.99] disabled:pointer-events-none disabled:opacity-45"
+                    >
+                      <ShareIcon className="size-4" />
+                      Share
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    className={`rounded-lg px-3 py-2.5 text-sm font-semibold text-ink/75 transition duration-200 hover:bg-ink/8 hover:text-ink ${
+                      canShareFiles ? "" : "mx-auto"
+                    }`}
+                  >
+                    Start over
+                  </button>
+                </div>
+              </div>
+              {canShareFiles && (
+                <p className="text-xs leading-relaxed text-pretty text-ink/75">
+                  Apps like WhatsApp recompress photos sent via Share. For full quality, tap
+                  Download, then attach the file as a Document in the app instead.
+                </p>
+              )}
+            </section>
+          </div>
+
+          <div
+            inert={downloadInView}
+            className={`on-dark fixed inset-x-0 bottom-0 z-40 bg-ink px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] transition-transform duration-300 ease-mech lg:hidden ${
+              downloadInView ? "translate-y-full" : "translate-y-0"
+            }`}
+          >
+            <button
+              type="button"
+              onClick={handleDownload}
+              disabled={!previewUrl}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-booth px-4 py-3 text-[15px] font-bold text-ink transition duration-200 active:scale-[0.99] disabled:opacity-45"
+            >
+              <DownloadIcon className="size-4.5" />
+              Download {formatLabel}
+              {sizeLabel && <span className="tabular-nums">· {sizeLabel}</span>}
+            </button>
+          </div>
+        </>
+      )}
 
       {isCameraOpen && (
         <div
@@ -922,20 +1315,34 @@ export default function PhotoEditor({
           onKeyDown={(e) => {
             if (e.key === "Escape") closeCamera();
           }}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-[#141310]/90 p-4 backdrop-blur-md"
+          className="on-dark fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 bg-stage p-4 text-stage-text"
         >
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="max-h-[70dvh] w-full max-w-2xl rounded-2xl bg-[#0c0b0a] shadow-2xl ring-1 ring-white/10"
-          />
+          <p className="flex w-full max-w-2xl items-center gap-2 text-sm font-semibold">
+            <span aria-hidden="true" className="size-2 animate-live rounded-full bg-curtain" />
+            Camera on
+            <span className="ml-auto text-xs font-normal text-stage-muted">
+              {chosenPreset ? presetCaption(chosenPreset) : "Fit your head and shoulders in the frame"}
+            </span>
+          </p>
+          <div className="relative w-full max-w-2xl">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="max-h-[68dvh] w-full rounded-2xl bg-black ring-1 ring-stage-line"
+            />
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute top-1/2 left-1/2 h-[78%] -translate-x-1/2 -translate-y-1/2 rounded-[4px] border-2 border-dashed border-booth/80"
+              style={{ aspectRatio: String(chosenPreset?.aspect ?? 4 / 5) }}
+            />
+          </div>
           <div className="grid w-full max-w-2xl grid-cols-3 items-center">
             <button
               type="button"
               onClick={closeCamera}
-              className="justify-self-start rounded-lg px-3 py-2 text-sm font-medium text-white/70 transition duration-200 hover:bg-white/10 hover:text-white"
+              className="justify-self-start rounded-lg px-3 py-2 text-sm font-semibold text-stage-muted transition duration-200 hover:bg-stage-raised hover:text-stage-text"
             >
               Cancel
             </button>
@@ -944,9 +1351,9 @@ export default function PhotoEditor({
               type="button"
               onClick={capturePhoto}
               aria-label="Capture photo"
-              className="group size-16 justify-self-center rounded-full border-2 border-white/80 p-1 transition duration-200 active:scale-95"
+              className="group size-[4.5rem] justify-self-center rounded-full border-[3px] border-booth p-1.5 transition duration-200 active:scale-95"
             >
-              <span className="block size-full rounded-full bg-white transition duration-200 group-hover:scale-95" />
+              <span className="block size-full rounded-full bg-booth transition duration-200 group-hover:scale-95" />
             </button>
           </div>
         </div>

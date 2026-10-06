@@ -36,7 +36,7 @@ export const HOME_FAQS: Faq[] = [
   {
     question: "How do I reduce a photo to under 20 KB or 50 KB?",
     answer:
-      "Choose JPEG, then lower the quality slider. The Download button shows the file size before you save, so you can stop as soon as it's under the limit. A smaller pixel size also makes the file smaller.",
+      "Choose JPEG and set Max file size to 20 KB or 50 KB, or type any other limit. FormPic picks the highest quality that fits and shows the final size on the Download button. If the photo is too big even at the lowest quality, Shrink to fit lowers the pixel size as well.",
   },
   {
     question: "Are my photos uploaded to a server?",
@@ -105,7 +105,7 @@ export const GUIDES: Guide[] = [
       {
         question: "How do I make a passport size photo under 50 KB?",
         answer:
-          "Keep the format on JPEG and lower the quality slider. The Download button shows the file size before you save, so stop once it's under the limit.",
+          "Keep the format on JPEG and choose 50 KB under Max file size. FormPic picks the highest quality that fits, and the Download button shows the final size.",
       },
       {
         question: "Can I make a passport size photo on my phone?",
@@ -169,7 +169,7 @@ export const GUIDES: Guide[] = [
       {
         question: "How do I keep the file under 240 KB?",
         answer:
-          "Choose JPEG and lower the quality slider until the size shown on the Download button is under 240 KB. A 600 × 600 px JPEG is usually well under the limit.",
+          "The US preset sets a 240 KB limit for you, so FormPic picks the highest JPEG quality that fits. A 600 × 600 px JPEG is usually well under it anyway.",
       },
     ],
     sources: [
@@ -216,12 +216,12 @@ export const GUIDES: Guide[] = [
       {
         question: "How do I resize a PAN card photo to under 20 KB?",
         answer:
-          "Keep the PAN card preset, which exports a 197 × 276 px JPEG, and lower the quality slider until the size on the Download button is under 20 KB.",
+          "Keep the PAN card preset. It exports a 197 × 276 px JPEG with a 20 KB limit already set, and FormPic picks the highest quality that fits.",
       },
       {
         question: "Can I resize my PAN card signature here too?",
         answer:
-          "Yes. Upload a photo or scan of your signature, choose Free and draw the crop around it, turn off the aspect lock, and set the size to 354 × 157 px (4.5 × 2 cm at 200 DPI). Export as JPEG under 10 KB.",
+          "Yes. Upload a photo or scan of your signature, choose Free and draw the crop around it, turn off the aspect lock, and set the size to 354 × 157 px (4.5 × 2 cm at 200 DPI). Then type 10 into the Max file size field.",
       },
       {
         question: "Is 3.5 × 2.5 cm the same as 2.5 × 3.5 cm?",
@@ -243,8 +243,481 @@ export const GUIDES: Guide[] = [
     ],
     updated: "2026-10-07",
   },
+  {
+    slug: "upsc-photo",
+    subject: "UPSC photo",
+    metaTitle: "UPSC photo and signature size (JPG, 20–300 KB)",
+    metaDescription:
+      "Resize your photo for the UPSC online application: a JPG between 20 KB and 300 KB, 350 to 1000 pixels per side. Signature steps too. Free, and nothing is uploaded.",
+    heading: "UPSC photo resizer",
+    headingAccent: ", 20 to 300 KB.",
+    intro:
+      "Crop a photo to a size UPSC's online application accepts and download a JPG between 20 and 300 KB. It all happens in your browser.",
+    question: "What size should a UPSC photo be?",
+    answer:
+      "UPSC asks for the photo and the signature as JPG files between 20 KB and 300 KB, each between 350 × 350 and 1000 × 1000 pixels. UPSC doesn't set a print size, so FormPic uses passport size, 35 × 45 mm at 300 DPI (413 × 531 pixels), which sits inside that range. For the Civil Services Examination you also capture a live photo with your camera while filling in the form.",
+    facts: [
+      { label: "File size", value: "20–300 KB", note: "photo and signature" },
+      { label: "Pixels", value: "350–1000 px", note: "width and height" },
+      { label: "File type", value: "JPG", note: "photo ID goes up as a PDF" },
+      { label: "FormPic size", value: "413 × 531 px", note: "35 × 45 mm at 300 DPI" },
+      { label: "Signature", value: "Signed 3 times", note: "one below the other" },
+    ],
+    requirements: [
+      "A clear, recent photo in which your face is easy to make out.",
+      "Between 350 and 1000 pixels in both width and height.",
+      "For the Civil Services Examination, a signature signed three times, one below the other, on plain white paper in black ink.",
+      "A live photo, captured with your camera in the application form, alongside the uploaded one.",
+    ],
+    faqs: [
+      {
+        question: "How do I resize my UPSC signature?",
+        answer:
+          "Sign three times, one below the other, on plain white paper in black ink, and photograph the page. Upload it here, choose Free and crop around all three signatures, then check that Width and Height are both between 350 and 1000 px. Type 300 into Max file size, and make sure the Download button shows at least 20 KB.",
+      },
+      {
+        question: "What if my UPSC photo is under 20 KB?",
+        answer:
+          "UPSC doesn't accept files under 20 KB. With the UPSC preset, FormPic raises the JPEG quality to stay above it, and if the file is still too small, Enlarge to fit adds pixels without changing the shape.",
+      },
+      {
+        question: "Can I use a passport size photo for UPSC?",
+        answer:
+          "Yes. UPSC sets a pixel range, not a print size, and a passport size photo at 413 × 531 pixels is inside it. Any other size from 350 to 1000 pixels per side works too: type it into Width and Height.",
+      },
+      {
+        question: "Is my photo uploaded to FormPic?",
+        answer:
+          "No. FormPic crops and compresses the photo in your browser, so it never leaves your device. The only place it goes is the form you upload it to.",
+      },
+    ],
+    sources: [
+      {
+        publisher: "Union Public Service Commission",
+        title: "One Time Registration: frequently asked questions",
+        url: "https://upsconline.gov.in/OTRP/candidate/faq.php",
+      },
+      {
+        publisher: "Union Public Service Commission",
+        title: "Civil Services (Preliminary) Examination 2026 notice",
+        url: "https://www.upsc.gov.in/sites/default/files/Notif-CSP-2026-Engl-060226Rev.pdf",
+      },
+    ],
+    updated: "2026-10-07",
+  },
+  {
+    slug: "neet-photo",
+    subject: "NEET photo",
+    metaTitle: "NEET photo size (JPG, 10–200 KB) and signature resizer",
+    metaDescription:
+      "Resize your photo for the NEET (UG) application: a passport size JPG between 10 KB and 200 KB on a white background, face filling 80% of the photo. Free, no upload.",
+    heading: "NEET photo resizer",
+    headingAccent: ", 10 to 200 KB.",
+    intro:
+      "Crop a passport size photo for the NEET (UG) application and download a JPG inside NTA's size limits. Your photo stays in your browser.",
+    question: "What size should the NEET photo be?",
+    answer:
+      "The NEET (UG) 2026 information bulletin asks for a recent passport size photo, in colour or black and white, as a JPG between 10 KB and 200 KB. Your face, with both ears visible, should fill about 80% of the photo, against a white background. The signature goes up separately as a JPG between 10 KB and 100 KB. NTA doesn't give a pixel size, so FormPic uses passport size at 300 DPI: 413 × 531 pixels.",
+    facts: [
+      { label: "Photo", value: "10–200 KB", note: "JPG, passport size" },
+      { label: "Signature", value: "10–100 KB", note: "JPG" },
+      { label: "Face", value: "80%", note: "of the photo, ears visible" },
+      { label: "Background", value: "White", note: "colour or black and white photo" },
+      { label: "FormPic size", value: "413 × 531 px", note: "35 × 45 mm at 300 DPI" },
+    ],
+    requirements: [
+      "Recent. The 2026 bulletin asked for a photo taken after 1 January 2026.",
+      "White background. Colour and black and white photos are both accepted.",
+      "Face without a mask, filling about 80% of the photo, with both ears visible.",
+      "Glasses only if you wear them regularly.",
+      "Keep prints of the same photo: 6 to 8 passport size and 4 to 6 postcard size (4 × 6 in), for the exam centre and counselling.",
+    ],
+    faqs: [
+      {
+        question: "Does NEET still ask for a postcard size photo upload?",
+        answer:
+          "Not in the 2026 bulletin. It lists a passport size photo for upload and asks you to keep 4 to 6 postcard size (4 × 6 in) prints with a white background. NTA has changed this between years, so check the bulletin for your year.",
+      },
+      {
+        question: "What is the live photo in the NEET form?",
+        answer:
+          "While filling in the form, you capture a live photo with your webcam or phone camera, and NTA matches it against your Aadhaar photo. That happens inside the NEET form. FormPic is for the passport size photo you upload as well.",
+      },
+      {
+        question: "How do I resize my NEET signature?",
+        answer:
+          "Sign on plain white paper and photograph it. Upload it here, choose Free and crop close around the signature, then type 100 into Max file size. NTA's minimum is 10 KB, so check the size on the Download button before you save.",
+      },
+      {
+        question: "Is my photo uploaded to FormPic?",
+        answer:
+          "No. FormPic crops and compresses the photo in your browser, so it never leaves your device. The only place it goes is the form you upload it to.",
+      },
+    ],
+    sources: [
+      {
+        publisher: "National Testing Agency",
+        title: "NEET (UG) 2026 information bulletin",
+        url: "https://cdnbbsr.s3waas.gov.in/s37bc1ec1d9c3426357e69acd5bf320061/uploads/2026/02/202602231394640855.pdf",
+      },
+    ],
+    updated: "2026-10-07",
+  },
+  {
+    slug: "ibps-photo",
+    subject: "IBPS photo",
+    metaTitle: "IBPS photo and signature size (200×230 px, 20–50 KB)",
+    metaDescription:
+      "Resize your photo for IBPS bank exam forms: a 200 × 230 px JPEG between 20 and 50 KB, plus the signature, thumb impression and declaration sizes. Free, no upload.",
+    heading: "IBPS photo resizer",
+    headingAccent: ", 200 × 230 px.",
+    intro:
+      "Crop a photo to the size IBPS application forms ask for and download a JPEG between 20 and 50 KB. Everything runs in your browser.",
+    question: "What size is the IBPS photo?",
+    answer:
+      "IBPS asks for a recent passport style colour photo, preferably 200 × 230 pixels, as a JPG or JPEG between 20 KB and 50 KB. The signature is 140 × 60 pixels and 10–20 KB, the left thumb impression 240 × 240 pixels and 20–50 KB, and the handwritten declaration 800 × 400 pixels and 50–100 KB. You also capture a live photo with your webcam or phone during the application.",
+    facts: [
+      { label: "Photo", value: "200 × 230 px", note: "preferred size" },
+      { label: "Photo file", value: "20–50 KB", note: "JPG or JPEG" },
+      { label: "Signature", value: "140 × 60 px", note: "10–20 KB, black ink" },
+      { label: "Left thumb", value: "240 × 240 px", note: "20–50 KB" },
+      { label: "Declaration", value: "800 × 400 px", note: "50–100 KB, handwritten" },
+    ],
+    requirements: [
+      "A recent colour photo against a light, preferably white, background.",
+      "Looking straight at the camera with a relaxed face, with no harsh shadows or red-eye.",
+      "Glasses only if there are no reflections and your eyes are clearly visible. No caps, hats or dark glasses.",
+      "Religious headwear is allowed, as long as it doesn't cover your face.",
+    ],
+    faqs: [
+      {
+        question: "How do I resize my IBPS signature to 140 × 60 px?",
+        answer:
+          "Sign on white paper with a black pen, not in capital letters, and photograph it. Upload it here, choose Free and drag the crop into a wide strip around the signature, then turn off the aspect lock and type 140 and 60. Type 20 into Max file size. A signature this small can come out under the 10 KB minimum; if the Download button shows less, try a larger size with the same shape, such as 280 × 120.",
+      },
+      {
+        question: "How do I make the thumb impression and handwritten declaration?",
+        answer:
+          "The same way as the signature. For the thumb, press your left thumb on white paper with black or blue ink, crop to it, type 240 × 240 px and a Max file size of 50 KB. For the declaration, write the text IBPS gives in English, not in capitals, on white paper in black ink, crop to it, and type 800 × 400 px with a Max file size of 100 KB.",
+      },
+      {
+        question: "What if my IBPS photo is under 20 KB?",
+        answer:
+          "A 200 × 230 px photo can come out small. With the IBPS preset, FormPic raises the JPEG quality to get above 20 KB, and if that isn't enough, Enlarge to fit adds pixels without changing the shape. IBPS calls 200 × 230 px the preferred size rather than a fixed one.",
+      },
+      {
+        question: "Is my photo uploaded to FormPic?",
+        answer:
+          "No. FormPic crops and compresses the photo in your browser, so it never leaves your device. The only place it goes is the form you upload it to.",
+      },
+    ],
+    sources: [
+      {
+        publisher: "Institute of Banking Personnel Selection",
+        title: "Guidelines for scanning and upload of documents",
+        url: "https://ibpsreg.ibps.in/crppoxvjun25/uploads/loadpdf.php?file=k7m5p+fQ15erzNvj0OHb1N7UnJp9sc%2FKYaao1bWrpok%3D&t=1LHArOLA2di0yczXwNDa083LmNWypw%3D%3D",
+      },
+    ],
+    updated: "2026-10-07",
+  },
+  {
+    slug: "ssc-signature",
+    subject: "SSC signature",
+    metaTitle: "SSC signature resize (6 × 2 cm, 10–20 KB) and photo rules",
+    metaDescription:
+      "Resize your signature for SSC exam forms: a JPEG between 10 and 20 KB, about 6.0 × 2.0 cm. SSC captures your photo live in the form, so the signature is what you upload.",
+    heading: "SSC signature resizer",
+    headingAccent: ", 10 to 20 KB.",
+    intro:
+      "SSC takes your photo with the camera while you fill in the form, so the signature is the image to prepare. Crop it and download a JPEG between 10 and 20 KB, right in your browser.",
+    question: "What is the SSC photo and signature size?",
+    answer:
+      "SSC asks for a scanned signature as a JPEG between 10 KB and 20 KB, about 6.0 cm wide and 2.0 cm high. There's no photo to upload: the application captures a live photo with your device's camera, and SSC rejects applications where the camera is pointed at an existing photo. At 200 DPI the signature works out to 472 × 157 pixels.",
+    facts: [
+      { label: "Signature", value: "10–20 KB", note: "JPEG or JPG" },
+      { label: "Print size", value: "6.0 × 2.0 cm", note: "width × height, about" },
+      { label: "Pixels", value: "472 × 157 px", note: "at 200 DPI" },
+      { label: "Photo", value: "Live capture", note: "taken in the form, not uploaded" },
+    ],
+    requirements: [
+      "Signature as a JPEG or JPG between 10 and 20 KB.",
+      "About 6.0 cm wide and 2.0 cm high.",
+      "Clear and full size. SSC rejects blurred or miniature signatures.",
+      "For the live photo: good light, a plain background, the camera at eye level, and no cap, mask or glasses.",
+    ],
+    faqs: [
+      {
+        question: "Do I need to upload a photo for SSC?",
+        answer:
+          "No. Current SSC notices, such as the Stenographer 2026 notice, say the application captures your photo with the camera. Capturing a photo of an existing photo gets the application rejected, so sit in front of the camera yourself.",
+      },
+      {
+        question: "How do I get my SSC signature between 10 and 20 KB?",
+        answer:
+          "Keep the SSC signature preset. It sets 472 × 157 px with a 20 KB limit and checks the 10 KB minimum. A signature on white paper can come out under 10 KB; if it does, press Enlarge to fit and FormPic adds pixels until the file is big enough.",
+      },
+      {
+        question: "Does Aadhaar authentication change the photo and signature rules?",
+        answer:
+          "SSC says applications from candidates who choose Aadhaar based authentication during One-Time Registration won't be rejected because the photo or signature doesn't meet the standards. A clear signature is still worth uploading.",
+      },
+      {
+        question: "Is my signature uploaded to FormPic?",
+        answer:
+          "No. FormPic crops and compresses the image in your browser, so it never leaves your device. The only place it goes is the SSC form.",
+      },
+    ],
+    sources: [
+      {
+        publisher: "Staff Selection Commission",
+        title: "Stenographer Grade C & D Examination 2026 notice",
+        url: "https://ssc.gov.in/api/attachment/uploads/masterData/NoticeBoards/Notice_of_adv_steno_2026.pdf",
+      },
+    ],
+    updated: "2026-10-07",
+  },
 ];
 
 export function getGuide(slug: string) {
   return GUIDES.find((guide) => guide.slug === slug);
+}
+
+/** A page for one file size limit, like "resize image to 20 KB", with the limit preset in the editor. */
+export type LimitGuide = {
+  slug: string;
+  kb: number;
+  metaTitle: string;
+  metaDescription: string;
+  heading: string;
+  headingAccent: string;
+  intro: string;
+  question: string;
+  answer: string;
+  facts: Fact[];
+  /** Ways to keep the photo sharp at this size, most effective first. */
+  tips: string[];
+  faqs: Faq[];
+  updated: string;
+};
+
+// Shared across the limit pages: how FormPic counts a KB, and that nothing is uploaded.
+function limitFaqs(kb: number): Faq[] {
+  return [
+    {
+      question: `Why does FormPic show ${((kb * 1000) / 1024).toFixed(1)} KB instead of ${kb} KB?`,
+      answer: `Some portals count a KB as 1,000 bytes and others as 1,024. FormPic keeps the file under ${(kb * 1000).toLocaleString("en-US")} bytes so it passes either check, and shows sizes in 1,024-byte units, so a file right at the limit reads ${((kb * 1000) / 1024).toFixed(1)} KB.`,
+    },
+    {
+      question: "Is my photo uploaded to compress it?",
+      answer:
+        "No. FormPic compresses the photo inside your browser, so it never leaves your device. That also makes it fast: there's no upload or download wait.",
+    },
+  ];
+}
+
+export const LIMIT_GUIDES: LimitGuide[] = [
+  {
+    slug: "resize-image-to-10kb",
+    kb: 10,
+    metaTitle: "Resize image to 10 KB online (JPEG, no upload)",
+    metaDescription:
+      "Reduce a signature or photo to under 10 KB for online forms. FormPic picks the best JPEG quality that fits, works on your phone, and never uploads the image.",
+    heading: "Resize image to 10 KB",
+    headingAccent: ", signatures too.",
+    intro:
+      "Add a signature or photo and FormPic compresses it to just under 10 KB, at the highest quality that fits. Crop it or set a pixel size if the form asks for one. Nothing is uploaded.",
+    question: "How do I resize an image to 10 KB?",
+    answer:
+      "Add your image, keep Max file size on 10 KB, and download. FormPic tries JPEG qualities until it finds the highest one that stays under 10 KB. If the image has too many pixels to fit at all, Shrink to fit lowers the width and height in proportion. 10 KB is a common limit for signatures, including the PAN card signature.",
+    facts: [
+      { label: "Limit", value: "10 KB", note: "under 10,000 bytes" },
+      { label: "Format", value: "JPEG", note: "what portals accept" },
+      { label: "Typical use", value: "Signatures", note: "like the PAN card signature" },
+    ],
+    tips: [
+      "Crop close around a signature. Empty paper still costs bytes.",
+      "Photograph the signature in even light, so the paper comes out plain white rather than grey.",
+      "Sign with a dark pen. A strong line stays readable after compression.",
+      "For a photo, crop to head and shoulders and use the form's pixel size. 10 KB holds a small face photo, not a large one.",
+    ],
+    faqs: [
+      {
+        question: "How do I resize a signature to 10 KB?",
+        answer:
+          "Photograph your signature on white paper and upload it. Choose Free and crop close around it, then download with the 10 KB limit on. For the PAN card signature, also type 354 × 157 px, which is 4.5 × 2 cm at 200 DPI.",
+      },
+      {
+        question: "Can a photo fit in 10 KB?",
+        answer:
+          "Yes, at small pixel sizes. A face photo around 150 to 200 pixels wide usually fits. If yours doesn't, Shrink to fit lowers the pixels until it does.",
+      },
+      ...limitFaqs(10),
+    ],
+    updated: "2026-10-07",
+  },
+  {
+    slug: "resize-image-to-20kb",
+    kb: 20,
+    metaTitle: "Resize image to 20 KB online (JPEG, no upload)",
+    metaDescription:
+      "Reduce a photo or signature to under 20 KB for online forms. FormPic picks the best JPEG quality that fits, works on your phone, and never uploads the image.",
+    heading: "Resize image to 20 KB",
+    headingAccent: ", sharp as it can be.",
+    intro:
+      "Add a photo and FormPic compresses it to just under 20 KB, at the highest quality that fits. Crop it or set a pixel size if the form asks for one. Nothing is uploaded.",
+    question: "How do I resize an image to 20 KB?",
+    answer:
+      "Add your photo, keep Max file size on 20 KB, and download. FormPic tries JPEG qualities until it finds the highest one that stays under 20 KB. If the photo has too many pixels to fit at all, Shrink to fit lowers the width and height in proportion. 20 KB is a common limit for application photos, including the PAN card photo.",
+    facts: [
+      { label: "Limit", value: "20 KB", note: "under 20,000 bytes" },
+      { label: "Format", value: "JPEG", note: "what portals accept" },
+      { label: "Typical use", value: "Form photos", note: "and PAN card photos" },
+    ],
+    tips: [
+      "Crop tight to your head and shoulders. Every pixel of background costs bytes.",
+      "Use the pixel size the form asks for. Large photos have to be compressed harder to reach 20 KB.",
+      "Shoot against a plain, evenly lit wall. Flat areas compress far better than busy ones.",
+      "If the form gives no pixel size, try around 200 to 300 pixels wide. That's plenty for a face on screen.",
+    ],
+    faqs: [
+      {
+        question: "Will my photo look blurry at 20 KB?",
+        answer:
+          "Not at the sizes forms ask for. The PAN card photo, 197 × 276 px, is specified to fit in 20 KB. Blur and blockiness appear when a large photo is squeezed into 20 KB, so crop first and use the form's pixel size.",
+      },
+      {
+        question: "What if the form asks for between 10 KB and 20 KB?",
+        answer:
+          "FormPic always picks the highest quality that fits, so the file usually lands just under 20 KB, well above a 10 KB minimum. Check the size on the Download button before you save.",
+      },
+      {
+        question: "Can I resize a signature to 20 KB?",
+        answer:
+          "Yes. Upload a photo or scan of your signature, choose Free and crop close around it, then download. A signature on white compresses very well, so it will fit easily.",
+      },
+      ...limitFaqs(20),
+    ],
+    updated: "2026-10-07",
+  },
+  {
+    slug: "resize-image-to-50kb",
+    kb: 50,
+    metaTitle: "Resize image to 50 KB online (JPEG, no upload)",
+    metaDescription:
+      "Compress a photo to under 50 KB for exam, job and visa forms. FormPic finds the best JPEG quality that fits, right in your browser. Free, with no upload.",
+    heading: "Resize image to 50 KB",
+    headingAccent: ", in your browser.",
+    intro:
+      "Add a photo and FormPic compresses it to just under 50 KB, at the highest quality that fits. Crop it or set an exact pixel size first if the form asks for one.",
+    question: "How do I resize an image to 50 KB?",
+    answer:
+      "Add your photo, keep Max file size on 50 KB, and download. FormPic searches for the highest JPEG quality that stays under 50 KB and shows the final size on the Download button. If the photo is still too big at the lowest quality, Shrink to fit lowers the width and height in proportion.",
+    facts: [
+      { label: "Limit", value: "50 KB", note: "under 50,000 bytes" },
+      { label: "Format", value: "JPEG", note: "what portals accept" },
+      { label: "Typical use", value: "Exam & job forms", note: "photo uploads" },
+    ],
+    tips: [
+      "Crop to the shape the form asks for before compressing, so no bytes go to background.",
+      "Type the form's exact pixel size into Width and Height, if it gives one.",
+      "Phone photos are several megabytes. Shrink to fit brings them down to a size 50 KB can hold cleanly.",
+      "A plain, evenly lit background keeps the face sharp at a small file size.",
+    ],
+    faqs: [
+      {
+        question: "How do I reduce a phone photo from 3 MB to 50 KB?",
+        answer:
+          "Add the photo and keep the 50 KB limit on. A phone photo has millions of pixels, so it usually needs fewer of them to fit: press Shrink to fit, or type the form's pixel size into Width and Height. FormPic then picks the best quality for 50 KB.",
+      },
+      {
+        question: "What if the form asks for between 20 KB and 50 KB?",
+        answer:
+          "FormPic picks the highest quality that fits, so the file usually lands just under 50 KB, comfortably above a 20 KB minimum. The Download button shows the exact size before you save.",
+      },
+      ...limitFaqs(50),
+    ],
+    updated: "2026-10-07",
+  },
+  {
+    slug: "resize-image-to-100kb",
+    kb: 100,
+    metaTitle: "Resize image to 100 KB online (JPEG, no upload)",
+    metaDescription:
+      "Compress a photo or document scan to under 100 KB, at the best JPEG quality that fits. Works on phones and laptops, free, and the image is never uploaded.",
+    heading: "Resize image to 100 KB",
+    headingAccent: ", nothing uploaded.",
+    intro:
+      "Add a photo or scan and FormPic compresses it to just under 100 KB, at the highest quality that fits. Crop and set a pixel size too if you need one.",
+    question: "How do I resize an image to 100 KB?",
+    answer:
+      "Add your image, keep Max file size on 100 KB, and download. FormPic searches for the highest JPEG quality that stays under 100 KB, so the result is as sharp as the limit allows. If it can't fit at the current pixel size, Shrink to fit lowers the width and height in proportion.",
+    facts: [
+      { label: "Limit", value: "100 KB", note: "under 100,000 bytes" },
+      { label: "Format", value: "JPEG", note: "what portals accept" },
+      { label: "Typical use", value: "Photos & scans", note: "ID and document uploads" },
+    ],
+    tips: [
+      "Crop away the table or background around a scanned document before compressing.",
+      "For text, keep enough pixels to read it: Shrink to fit lowers them only as far as needed.",
+      "If a photo already fits, FormPic keeps the quality high instead of shrinking it further.",
+      "Rotate sideways scans before downloading so the form shows them the right way up.",
+    ],
+    faqs: [
+      {
+        question: "Can I compress a scanned document to 100 KB?",
+        answer:
+          "Yes, if it's an image (JPG, PNG or WEBP). Crop it to the page, keep the 100 KB limit on, and download. FormPic doesn't open PDFs, so take a photo of the page or export the PDF page as an image first.",
+      },
+      {
+        question: "Will the photo keep its pixel size?",
+        answer:
+          "Yes. FormPic lowers JPEG quality first and keeps your width and height. Pixels only change if you press Shrink to fit or type a new size.",
+      },
+      ...limitFaqs(100),
+    ],
+    updated: "2026-10-07",
+  },
+  {
+    slug: "resize-image-to-200kb",
+    kb: 200,
+    metaTitle: "Resize image to 200 KB online (JPEG, no upload)",
+    metaDescription:
+      "Compress a photo to under 200 KB for exam, job and visa forms, at the best JPEG quality that fits. Free, works on any phone, and nothing is uploaded.",
+    heading: "Resize image to 200 KB",
+    headingAccent: ", quality kept high.",
+    intro:
+      "Add a photo and FormPic compresses it to just under 200 KB, at the highest quality that fits. Crop it or set a pixel size first if the form gives one.",
+    question: "How do I resize an image to 200 KB?",
+    answer:
+      "Add your photo, keep Max file size on 200 KB, and download. FormPic searches for the highest JPEG quality that stays under 200 KB and shows the final size on the Download button. A full-resolution phone photo can be too big even at low quality; Shrink to fit then lowers the width and height in proportion. 200 KB is the upper limit for the NEET (UG) photo.",
+    facts: [
+      { label: "Limit", value: "200 KB", note: "under 200,000 bytes" },
+      { label: "Format", value: "JPEG", note: "what portals accept" },
+      { label: "Typical use", value: "Exam photos", note: "like the NEET (UG) photo" },
+    ],
+    tips: [
+      "Crop to what the form needs first, so the bytes go to your face rather than the room.",
+      "Type the form's pixel size if it gives one. Fewer pixels leave room for higher quality.",
+      "Phone photos straight from the camera are several megabytes. Shrink to fit brings them into range in one step.",
+      "If the form also sets a minimum, check the size on the Download button before you save.",
+    ],
+    faqs: [
+      {
+        question: "How do I reduce a 5 MB photo to 200 KB?",
+        answer:
+          "Add the photo and keep the 200 KB limit on. If it can't fit at its full pixel size, press Shrink to fit, or type the form's pixel size into Width and Height. FormPic then picks the best quality for 200 KB.",
+      },
+      {
+        question: "Will the photo lose quality?",
+        answer:
+          "Some, because JPEG compression removes fine detail. FormPic stops at the highest quality that fits, so the photo loses only as much as the limit requires.",
+      },
+      ...limitFaqs(200),
+    ],
+    updated: "2026-10-07",
+  },
+];
+
+export function getLimitGuide(slug: string) {
+  return LIMIT_GUIDES.find((guide) => guide.slug === slug);
 }

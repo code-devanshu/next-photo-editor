@@ -1,64 +1,24 @@
-/** Shared crop-corner mark used by icon.tsx, apple-icon.tsx, and the OG image. */
-export function CropMark({
+/**
+ * FormPic's mark: a head-and-shoulders photo on booth yellow, the pictogram on every photo-booth
+ * panel. Plain SVG so it renders the same in the site header, icon.tsx, apple-icon.tsx and the OG image.
+ */
+export function BrandMark({
   size,
-  radius = 0,
-  background = "#1c1b18",
-  mark = "#d4552b",
+  radius = 7,
+  background = "#ffd100",
+  figure = "#141414",
 }: {
   size: number;
+  /** Corner radius in the mark's 32-unit grid; 0 for full-bleed install icons the OS masks itself. */
   radius?: number;
   background?: string;
-  mark?: string;
+  figure?: string;
 }) {
-  const glyph = Math.round(size * 0.56);
-  const corner = Math.round(glyph * 0.44);
-  const thickness = Math.max(2, Math.round(size * 0.09));
-
-  const cornerStyle = {
-    position: "absolute" as const,
-    width: corner,
-    height: corner,
-  };
-
   return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: radius,
-        background,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <div
-        style={{
-          position: "relative",
-          width: glyph,
-          height: glyph,
-          display: "flex",
-        }}
-      >
-        <div
-          style={{
-            ...cornerStyle,
-            top: 0,
-            left: 0,
-            borderTop: `${thickness}px solid ${mark}`,
-            borderLeft: `${thickness}px solid ${mark}`,
-          }}
-        />
-        <div
-          style={{
-            ...cornerStyle,
-            bottom: 0,
-            right: 0,
-            borderBottom: `${thickness}px solid ${mark}`,
-            borderRight: `${thickness}px solid ${mark}`,
-          }}
-        />
-      </div>
-    </div>
+    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <rect width="32" height="32" rx={radius} fill={background} />
+      <circle cx="16" cy="12.6" r="5.1" fill={figure} />
+      <path d="M7.2 32C7.2 24.2 10.7 20.6 16 20.6S24.8 24.2 24.8 32Z" fill={figure} />
+    </svg>
   );
 }

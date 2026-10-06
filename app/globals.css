@@ -1,62 +1,91 @@
 @import "tailwindcss";
 
 :root {
-  /* One warm gray family, one accent. */
-  --background: #f5f4f0;
-  --surface: #fdfcfa;
-  --sunken: #eeece6;
-  --foreground: #1c1b18;
-  --ink-hover: #36332d;
-  --muted: #6b675f;
-  --faint: #a39e93;
-  --border: #e3e0d8;
-  --border-strong: #cdc8bc;
-  --grid-line: rgb(120 100 70 / 0.09);
+  /* Photo-booth enamel: black and booth yellow, on photo-paper neutrals. */
+  --ground: #ecece8;
+  --surface: #ffffff;
+  --sunken: #e2e2dd;
+  --ink: #141414;
+  --ink-soft: #2b2b29;
+  --muted: #595954;
+  --faint: #8a8a84;
+  --rule: #d3d3cd;
+  --rule-strong: #b2b2ab;
 
-  --accent: #d4552b;
-  --accent-ink: #a5401c;
-  --accent-soft: #fbece5;
+  --booth: #ffd100;
+  --booth-deep: #f0bd00;
+  --booth-soft: #fff4bf;
 
-  --danger: #b42318;
-  --danger-soft: #fdf1ef;
-  --danger-border: #f3cdc7;
+  /* The booth interior: where the photo is framed. */
+  --stage: #1a1a18;
+  --stage-raised: #262624;
+  --stage-line: #3d3d39;
+  --stage-text: #efefe8;
+  --stage-muted: #a6a69e;
+
+  /* Curtain red: errors and the live-camera dot only. */
+  --curtain: #d7261e;
+  --curtain-ink: #a8160f;
+  --curtain-soft: #fdecea;
+  --curtain-line: #f3c4bf;
 }
 
 @theme inline {
-  --color-background: var(--background);
+  --color-ground: var(--ground);
   --color-surface: var(--surface);
   --color-sunken: var(--sunken);
-  --color-foreground: var(--foreground);
-  --color-ink-hover: var(--ink-hover);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
   --color-muted: var(--muted);
   --color-faint: var(--faint);
-  --color-border: var(--border);
-  --color-border-strong: var(--border-strong);
-  --color-accent: var(--accent);
-  --color-accent-ink: var(--accent-ink);
-  --color-accent-soft: var(--accent-soft);
-  --color-danger: var(--danger);
-  --color-danger-soft: var(--danger-soft);
-  --color-danger-border: var(--danger-border);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-booth: var(--booth);
+  --color-booth-deep: var(--booth-deep);
+  --color-booth-soft: var(--booth-soft);
+  --color-stage: var(--stage);
+  --color-stage-raised: var(--stage-raised);
+  --color-stage-line: var(--stage-line);
+  --color-stage-text: var(--stage-text);
+  --color-stage-muted: var(--stage-muted);
+  --color-curtain: var(--curtain);
+  --color-curtain-ink: var(--curtain-ink);
+  --color-curtain-soft: var(--curtain-soft);
+  --color-curtain-line: var(--curtain-line);
+  --font-sans: var(--font-archivo);
 }
 
 @theme {
-  /* Warm-tinted shadows, all lit from directly above. */
-  --shadow-panel: 0 1px 1px rgb(70 50 30 / 0.04), 0 12px 32px -16px rgb(70 50 30 / 0.18);
-  --shadow-segment: 0 1px 2px rgb(70 50 30 / 0.14), 0 0 0 1px rgb(70 50 30 / 0.05);
-  --shadow-photo: 0 1px 2px rgb(40 30 20 / 0.12), 0 14px 28px -14px rgb(40 30 20 / 0.4);
-  --shadow-button: inset 0 1px 0 rgb(255 255 255 / 0.12), 0 1px 2px rgb(28 27 24 / 0.2),
-    0 8px 18px -10px rgb(28 27 24 / 0.55);
+  --ease-mech: cubic-bezier(0.2, 0.8, 0.2, 1);
 
-  --animate-rise: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --shadow-print: 0 1px 2px rgb(20 20 20 / 0.18), 0 10px 24px -10px rgb(20 20 20 / 0.45);
+  --shadow-panel: 0 1px 2px rgb(20 20 20 / 0.06), 0 16px 36px -22px rgb(20 20 20 / 0.35);
+  --shadow-key: inset 0 -2px 0 rgb(20 20 20 / 0.16), 0 1px 2px rgb(20 20 20 / 0.2);
+
+  --animate-deliver: deliver 0.75s var(--ease-mech) both;
+  --animate-develop: develop 1.3s var(--ease-mech) both;
+  --animate-refresh: refresh 0.32s var(--ease-mech) both;
   --animate-shimmer: shimmer 1.4s ease-in-out infinite;
+  --animate-live: live 1.6s ease-in-out infinite;
 
-  @keyframes rise {
+  /* The print slides down out of the delivery slot... */
+  @keyframes deliver {
     from {
-      opacity: 0;
-      transform: translateY(10px);
+      transform: translateY(-105%);
+    }
+  }
+
+  /* ...and develops from a pale, flat image to full tone. */
+  @keyframes develop {
+    from {
+      filter: grayscale(1) contrast(0.45) brightness(1.55);
+    }
+  }
+
+  /* Later prints fade up in place instead of being delivered again. */
+  @keyframes refresh {
+    from {
+      opacity: 0.35;
     }
   }
 
@@ -68,53 +97,106 @@
       background-position: -100% 0;
     }
   }
+
+  @keyframes live {
+    50% {
+      opacity: 0.35;
+    }
+  }
 }
 
-/* Cutting-mat grid behind the photo and the hero. */
-@utility mat-grid {
-  background-image:
-    linear-gradient(var(--grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-  background-size: 24px 24px;
-  background-position: -1px -1px;
+/* Booth signage lettering: Archivo condensed, heavy, in caps. */
+@utility signage {
+  font-stretch: 75%;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.004em;
+  line-height: 0.92;
 }
 
-/* Transparency checkerboard for the export preview. */
+/* The same face for figures, which keep their units' case (mm, px). */
+@utility figures {
+  font-stretch: 75%;
+  font-weight: 800;
+  letter-spacing: -0.005em;
+  line-height: 1;
+}
+
+/* Transparency checkerboard behind PNG prints. */
 @utility checker {
-  background-color: #f8f7f4;
-  background-image: conic-gradient(#ebe8e1 25%, transparent 0 50%, #ebe8e1 0 75%, transparent 0);
-  background-size: 14px 14px;
+  background-color: #f6f6f3;
+  background-image: conic-gradient(#e6e6e1 25%, transparent 0 50%, #e6e6e1 0 75%, transparent 0);
+  background-size: 12px 12px;
 }
 
 @utility skeleton {
-  background-image: linear-gradient(90deg, var(--sunken) 25%, #f8f6f2 50%, var(--sunken) 75%);
+  background-image: linear-gradient(90deg, var(--sunken) 25%, #f3f3f0 50%, var(--sunken) 75%);
   background-size: 200% 100%;
 }
 
 @layer base {
+  html {
+    scrollbar-color: var(--rule-strong) var(--ground);
+    text-underline-offset: 0.22em;
+  }
+
   :focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--ink);
     outline-offset: 2px;
   }
 
+  /* Dark surfaces (header, footer, booth stage) take a yellow focus ring. */
+  .on-dark :focus-visible,
+  .on-dark:focus-visible {
+    outline-color: var(--booth);
+  }
+
   ::selection {
-    background: var(--accent-soft);
-    color: var(--foreground);
+    background: var(--booth);
+    color: var(--ink);
+  }
+
+  input,
+  textarea {
+    caret-color: var(--ink);
+  }
+
+  input[type="range"] {
+    accent-color: var(--ink);
   }
 }
 
 body {
-  background-color: var(--background);
-  /* Faint paper grain so large surfaces don't read as flat vectors. */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.3 0 0 0 0 0.22 0 0 0 0 0.12 0.09 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  color: var(--foreground);
-  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  background-color: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
 }
 
 .ReactCrop {
-  --rc-border-color: rgb(255 255 255 / 0.9);
-  --rc-focus-color: var(--accent);
-  --rc-drag-handle-bg-colour: rgb(28 27 24 / 0.55);
+  --rc-border-color: var(--booth);
+  --rc-focus-color: var(--booth);
+  --rc-drag-handle-bg-colour: var(--booth);
+  --rc-drag-handle-size: 14px;
+  --rc-drag-handle-mobile-size: 26px;
+}
+
+.ReactCrop__rule-of-thirds-vt::before,
+.ReactCrop__rule-of-thirds-vt::after,
+.ReactCrop__rule-of-thirds-hz::before,
+.ReactCrop__rule-of-thirds-hz::after {
+  background-color: rgb(255 255 255 / 0.35);
+}
+
+.ReactCrop .ReactCrop__drag-handle {
+  border-color: var(--ink);
+}
+
+/* A solid booth-yellow crop frame instead of the library's marching ants. */
+.ReactCrop .ReactCrop__crop-selection {
+  background-image: none;
+  animation: none;
+  box-shadow: inset 0 0 0 2px var(--booth);
 }
 
 @media (prefers-reduced-motion: reduce) {

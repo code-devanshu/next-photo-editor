@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import PhotoEditor from "@/components/photo-editor";
 import {
   FaqList,
+  Feedback,
   GuideContent,
   HowToSteps,
   PrivacyNote,
@@ -25,7 +26,7 @@ export default function Home() {
   return (
     <main
       id="main"
-      className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pt-6 pb-16 sm:px-6"
+      className="mx-auto flex w-full max-w-[88rem] flex-1 flex-col px-4 pb-20 sm:px-6"
     >
       <script
         type="application/ld+json"
@@ -49,6 +50,7 @@ export default function Home() {
         <HowToSteps title="How to resize a photo for a form" />
         <PrivacyNote />
         <FaqList faqs={HOME_FAQS} />
+        <Feedback />
       </GuideContent>
     </main>
   );

@@ -41,3 +41,9 @@ yarn-error.log*
 next-env.d.ts
 
 certificates
+
+# design and tooling notes (not needed to build or run the app)
+/.impeccable/
+/DESIGN.md
+/PRODUCT.md
+/.code-review-graph/
