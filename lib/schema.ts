@@ -10,7 +10,7 @@ export const siteSchema = {
       name: SITE_NAME,
       url: SITE_URL,
       description: SITE_DESCRIPTION,
-      inLanguage: "en",
+      inLanguage: ["en-IN", "hi-IN"],
     },
     {
       "@type": "WebApplication",
@@ -22,73 +22,85 @@ export const siteSchema = {
       operatingSystem: "Any",
       browserRequirements: "Requires JavaScript and a modern web browser",
       isAccessibleForFree: true,
-      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+      offers: { "@type": "Offer", price: 0, priceCurrency: "INR" },
       featureList: [
         "Crop and resize photos in the browser with no upload",
-        "Passport size (35×45 mm), US passport and visa (2×2 in), and PAN card (25×35 mm) presets",
+        "Presets for passport, visa, PAN card, exam and signature uploads, checked against official notices",
         "Exact pixel sizes with an aspect-ratio lock",
-        "JPEG or PNG export with adjustable quality and a live file-size estimate",
-        "Compression to a file size limit in KB, at the highest JPEG quality that fits",
+        "JPEG or PNG export with a live file-size estimate",
+        "Compression to a KB limit, and raising small files above a KB minimum",
+        "Name and date printed on the photo",
+        "Images to a PDF under a KB limit",
         "Camera capture on phones and laptops",
       ],
     },
   ],
 };
 
+export type Crumb = { name: string; url: string };
+
 /**
- * The page itself, typed as an FAQPage so its questions stay eligible for FAQ results.
- * Guide pages also pass a breadcrumb name and the official sources they cite.
+ * The page and its breadcrumb trail. The page is typed as an FAQPage when it has questions, so they
+ * stay eligible for FAQ results; the questions are the same strings the page shows.
  */
 export function pageSchema({
-  path,
+  url,
   name,
   description,
   dateModified,
   faqs,
-  breadcrumbName,
+  breadcrumbs,
   sources,
+  inLanguage = "en-IN",
 }: {
-  path: string;
+  url: string;
   name: string;
   description: string;
   dateModified: string;
   faqs: Faq[];
-  breadcrumbName?: string;
+  /** The trail from the home page to this page, both included. Omitted on the home page. */
+  breadcrumbs?: Crumb[];
   sources?: Source[];
+  inLanguage?: string;
 }) {
-  const url = path === "/" ? SITE_URL : `${SITE_URL}${path}`;
-  return {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
+  const breadcrumbId = `${url}#breadcrumb`;
+  const page = {
+    "@type": faqs.length > 0 ? ["WebPage", "FAQPage"] : "WebPage",
     "@id": `${url}#webpage`,
     url,
     name,
     description,
-    inLanguage: "en",
+    inLanguage,
     dateModified,
     isPartOf: { "@id": `${SITE_URL}/#website` },
     about: { "@id": `${SITE_URL}/#app` },
-    ...(breadcrumbName && {
-      breadcrumb: {
-        "@type": "BreadcrumbList",
-        itemListElement: [
-          { "@type": "ListItem", position: 1, name: SITE_NAME, item: SITE_URL },
-          { "@type": "ListItem", position: 2, name: breadcrumbName, item: url },
-        ],
-      },
-    }),
-    ...(sources && {
-      citation: sources.map((source) => ({
-        "@type": "WebPage",
-        name: source.title,
-        url: source.url,
-        publisher: { "@type": "Organization", name: source.publisher },
+    ...(breadcrumbs && { breadcrumb: { "@id": breadcrumbId } }),
+    ...(sources &&
+      sources.length > 0 && {
+        citation: sources.map((source) => ({
+          "@type": "WebPage",
+          name: source.title,
+          url: source.url,
+          publisher: { "@type": "Organization", name: source.publisher },
+        })),
+      }),
+    ...(faqs.length > 0 && {
+      mainEntity: faqs.map(({ question, answer }) => ({
+        "@type": "Question",
+        name: question,
+        acceptedAnswer: { "@type": "Answer", text: answer },
       })),
     }),
-    mainEntity: faqs.map(({ question, answer }) => ({
-      "@type": "Question",
-      name: question,
-      acceptedAnswer: { "@type": "Answer", text: answer },
+  };
+  const trail = breadcrumbs && {
+    "@type": "BreadcrumbList",
+    "@id": breadcrumbId,
+    itemListElement: breadcrumbs.map((crumb, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: crumb.name,
+      item: crumb.url,
     })),
   };
+  return { "@context": "https://schema.org", "@graph": trail ? [page, trail] : [page] };
 }

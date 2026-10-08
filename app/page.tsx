@@ -5,12 +5,13 @@ import {
   Feedback,
   GuideContent,
   HowToSteps,
+  HubLinks,
   PrivacyNote,
   SizesTable,
 } from "@/components/guide-sections";
-import { FEATURED_PRESETS, HOME_PAGE as page } from "@/lib/pages";
+import { FEATURED_PRESETS, HOME_PAGE as page, PAGES, hubMembers } from "@/lib/pages";
 import { pageSchema } from "@/lib/schema";
-import { SITE_NAME, jsonLd, pageMetadata } from "@/lib/site";
+import { SITE_NAME, SITE_URL, jsonLd, pageMetadata } from "@/lib/site";
 
 // The root layout's title template only applies to child segments, so the home title is written out in full.
 export const metadata: Metadata = pageMetadata({
@@ -30,7 +31,7 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={jsonLd(
           pageSchema({
-            path: "/",
+            url: SITE_URL,
             name: page.title,
             description: page.metaDescription,
             dateModified: page.updated,
@@ -45,6 +46,12 @@ export default function Home() {
         presets={FEATURED_PRESETS}
       />
       <GuideContent>
+        <HubLinks
+          hubs={PAGES.filter((hub) => hub.category === "hub").map((hub) => ({
+            page: hub,
+            count: hubMembers(hub).length,
+          }))}
+        />
         <SizesTable />
         <HowToSteps title={page.steps?.title ?? ""} />
         <PrivacyNote />

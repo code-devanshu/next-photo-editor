@@ -6,7 +6,10 @@ import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 export const dynamic = "force-static";
 
 export function GET() {
-  const tools = SUBPAGES.flatMap((page) => {
+  const hubs = SUBPAGES.filter((page) => page.category === "hub").map(
+    (page) => `- [${page.name}](${SITE_URL}/${page.slug}): ${page.metaDescription}`
+  );
+  const tools = SUBPAGES.filter((page) => page.category !== "hub").flatMap((page) => {
     const preset = pagePreset(page);
     if (preset) {
       const resolution = preset.dpi ? ` at ${preset.dpi} DPI` : "";
@@ -17,7 +20,7 @@ export function GET() {
     if (kb) {
       return `- [${page.name}](${SITE_URL}/${page.slug}): the highest JPEG quality that stays under ${kb} KB`;
     }
-    return [];
+    return `- [${page.name}](${SITE_URL}/${page.slug}): ${page.metaDescription}`;
   });
   const answers = PAGES.filter((page) => page.question && page.answer).map(
     (page) => `- ${page.question} ${page.answer}`
@@ -29,6 +32,10 @@ export function GET() {
     `> ${SITE_DESCRIPTION}`,
     "",
     "Photos are cropped and resized with the browser's canvas API and saved straight to the user's device. There is no upload, no account and no watermark, and the editor keeps working offline once loaded.",
+    "",
+    "## Categories",
+    "",
+    ...hubs,
     "",
     "## Tools",
     "",

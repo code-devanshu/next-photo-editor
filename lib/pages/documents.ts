@@ -19,7 +19,7 @@ export const DOCUMENT_PAGES: PageEntry[] = [
     },
     title: "Passport size photo maker (35×45 mm, 413×531 px)",
     metaDescription:
-      "Make a passport size photo online: crop to 35 × 45 mm (3.5 × 4.5 cm) and download a 413 × 531 px JPEG. Free, works on your phone, and the photo is never uploaded.",
+      "Make a passport size photo online: crop to 35 × 45 mm (3.5 × 4.5 cm) and download a 413 × 531 px JPEG. Free, on your phone, never uploaded.",
     h1: "Passport size photo maker",
     h1Accent: ", 35 × 45 mm.",
     intro:
@@ -145,7 +145,7 @@ export const DOCUMENT_PAGES: PageEntry[] = [
     },
     title: "US passport & visa photo (2×2 in, 600×600 px)",
     metaDescription:
-      "Make a US passport or visa photo online: a square 2 × 2 inch crop, exported as a 600 × 600 px JPEG under 240 KB for the DS-160. Free and private, with no upload.",
+      "Make a US passport or visa photo: a 2 × 2 inch square, saved as a 600 × 600 px JPEG under 240 KB for the DS-160. Free and private, no upload.",
     h1: "US passport & visa photo",
     h1Accent: ", 2 × 2 in.",
     intro:
@@ -232,7 +232,7 @@ export const DOCUMENT_PAGES: PageEntry[] = [
     },
     title: "PAN card photo resizer (25×35 mm, 197×276 px)",
     metaDescription:
-      "Resize a photo for your PAN card application: 2.5 × 3.5 cm at 200 DPI (197 × 276 px), saved as a small JPEG for the upload limit. Free, and the photo is never uploaded.",
+      "Resize a photo for your PAN application: 2.5 × 3.5 cm at 200 DPI (197 × 276 px), a JPEG under 20 KB. Free, and the photo is never uploaded.",
     h1: "PAN card photo resizer",
     h1Accent: ", 2.5 × 3.5 cm.",
     intro:

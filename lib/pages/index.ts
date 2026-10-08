@@ -3,6 +3,7 @@ import { DOCUMENT_PAGES } from "@/lib/pages/documents";
 import { ENTRANCE_PAGES } from "@/lib/pages/entrance";
 import { EXAM_PAGES } from "@/lib/pages/exams";
 import { HOME_PAGE } from "@/lib/pages/home";
+import { HUB_PAGES } from "@/lib/pages/hubs";
 import { LIMIT_PAGES } from "@/lib/pages/limits";
 import { RAILWAY_PAGES } from "@/lib/pages/railways";
 import { SIZE_PAGES } from "@/lib/pages/sizes";
@@ -12,6 +13,7 @@ import { TOOL_PAGES } from "@/lib/pages/tools";
 import { VISA_PAGES } from "@/lib/pages/visas";
 import type { Category, PageEntry } from "@/lib/pages/types";
 import type { FormPreset } from "@/lib/presets";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 export type { Category, Faq, Fact, PageEntry, Source, SpecRow, Step } from "@/lib/pages/types";
 
@@ -21,6 +23,7 @@ export type { Category, Faq, Fact, PageEntry, Source, SpecRow, Step } from "@/li
  */
 export const ALL_PAGES: PageEntry[] = [
   HOME_PAGE,
+  ...HUB_PAGES,
   ...DOCUMENT_PAGES,
   ...VISA_PAGES,
   ...EXAM_PAGES,
@@ -64,6 +67,32 @@ export function pagePreset(page: PageEntry): FormPreset | undefined {
 export const FEATURED_PRESETS: FormPreset[] = PAGES.filter((page) => page.featured)
   .map(pagePreset)
   .filter((preset): preset is FormPreset => !!preset);
+
+/** The absolute URL of a page, as used in canonicals, structured data and the sitemap. */
+export function pageUrl(page: Pick<PageEntry, "slug">) {
+  return page.slug ? `${SITE_URL}/${page.slug}` : SITE_URL;
+}
+
+/** The hub that lists a page's category, if any. */
+export function hubFor(page: PageEntry) {
+  return PAGES.find((hub) => hub.hub?.includes(page.category as never));
+}
+
+/** The published pages a hub lists, in config order. */
+export function hubMembers(hub: PageEntry) {
+  return PAGES.filter((page) => hub.hub?.includes(page.category as never));
+}
+
+/** Home, then the page's hub if it has one, then the page itself. Empty for the home page. */
+export function breadcrumbs(page: PageEntry): { name: string; path: string; url: string }[] {
+  if (!page.slug) return [];
+  const hub = hubFor(page);
+  return [
+    { name: SITE_NAME, path: "/", url: SITE_URL },
+    ...(hub ? [{ name: hub.name, path: pagePath(hub), url: pageUrl(hub) }] : []),
+    { name: page.name, path: pagePath(page), url: pageUrl(page) },
+  ];
+}
 
 /** The pages a page links to in its related block, skipping drafts. */
 export function relatedPages(page: PageEntry) {

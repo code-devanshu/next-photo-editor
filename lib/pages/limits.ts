@@ -101,7 +101,7 @@ export const LIMIT_PAGES: PageEntry[] = [
     limit: { maxKb: 10 },
     title: "Resize image to 10 KB online (JPEG, no upload)",
     metaDescription:
-      "Reduce a signature or photo to under 10 KB for online forms. FormPic picks the best JPEG quality that fits, works on your phone, and never uploads the image.",
+      "Reduce a signature or photo to under 10 KB for online forms. FormPic picks the best JPEG quality that fits, on your phone, and never uploads it.",
     h1: "Resize image to 10 KB",
     h1Accent: ", signatures too.",
     intro:
@@ -163,7 +163,7 @@ export const LIMIT_PAGES: PageEntry[] = [
     limit: { maxKb: 20 },
     title: "Resize image to 20 KB online (JPEG, no upload)",
     metaDescription:
-      "Reduce a photo or signature to under 20 KB for online forms. FormPic picks the best JPEG quality that fits, works on your phone, and never uploads the image.",
+      "Reduce a photo or signature to under 20 KB for online forms. FormPic picks the best JPEG quality that fits, on your phone, and never uploads it.",
     h1: "Resize image to 20 KB",
     h1Accent: ", sharp as it can be.",
     intro:

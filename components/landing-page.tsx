@@ -1,6 +1,7 @@
 import PdfMaker from "@/components/pdf-maker";
 import PhotoEditor from "@/components/photo-editor";
 import {
+  Breadcrumbs,
   FaqList,
   Feedback,
   GuideContent,
@@ -12,13 +13,30 @@ import {
   Sources,
   SpecTable,
 } from "@/components/guide-sections";
-import { FEATURED_PRESETS, pagePath, pagePreset, relatedPages, type PageEntry } from "@/lib/pages";
+import {
+  FEATURED_PRESETS,
+  breadcrumbs,
+  hubMembers,
+  pagePreset,
+  pageUrl,
+  relatedPages,
+  type PageEntry,
+} from "@/lib/pages";
+import type { FormPreset } from "@/lib/presets";
 import { pageSchema } from "@/lib/schema";
 import { jsonLd } from "@/lib/site";
 
-/** A size, form or file size page: the editor with the page's settings, then the guide below it. */
+// A hub's editor offers the hub's own sizes, up to this many, instead of the featured ones.
+const HUB_PICKER_SIZE = 8;
+
+/** A size, form, file size or hub page: the editor with the page's settings, then the guide below it. */
 export function LandingPage({ page }: { page: PageEntry }) {
   const preset = pagePreset(page);
+  const crumbs = breadcrumbs(page);
+  const members = page.category === "hub" ? hubMembers(page) : [];
+  const memberPresets = members.map(pagePreset).filter((member): member is FormPreset => !!member);
+  const pickerPresets = memberPresets.length > 0 ? memberPresets.slice(0, HUB_PICKER_SIZE) : FEATURED_PRESETS;
+
   return (
     <main
       id="main"
@@ -28,16 +46,17 @@ export function LandingPage({ page }: { page: PageEntry }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={jsonLd(
           pageSchema({
-            path: pagePath(page),
+            url: pageUrl(page),
             name: page.title,
             description: page.metaDescription,
             dateModified: page.updated,
             faqs: page.faqs,
-            breadcrumbName: page.name,
-            ...(page.sources.length > 0 && { sources: page.sources }),
+            breadcrumbs: crumbs.map(({ name, url }) => ({ name, url })),
+            sources: page.sources,
           })
         )}
       />
+      <Breadcrumbs crumbs={crumbs} />
       {page.tool === "pdf" ? (
         <PdfMaker title={page.h1} titleAccent={page.h1Accent} intro={page.intro} maxKb={page.limit?.maxKb} />
       ) : (
@@ -46,7 +65,7 @@ export function LandingPage({ page }: { page: PageEntry }) {
           titleAccent={page.h1Accent}
           intro={page.intro}
           preset={preset}
-          presets={FEATURED_PRESETS}
+          presets={pickerPresets}
           maxKb={page.limit?.maxKb}
           minKb={page.limit?.minKb}
           kind={page.limit?.kind}
@@ -56,6 +75,9 @@ export function LandingPage({ page }: { page: PageEntry }) {
       <GuideContent>
         {page.question && page.answer && (
           <SizeAnswer question={page.question} answer={page.answer} facts={page.facts ?? []} />
+        )}
+        {members.length > 0 && (
+          <RelatedPages pages={members} title={page.listTitle ?? page.name} id="all-pages" custom={false} />
         )}
         {page.spec && (
           <SpecTable
@@ -85,7 +107,7 @@ export function LandingPage({ page }: { page: PageEntry }) {
         {page.sources.length > 0 && (
           <Sources sources={page.sources} updated={page.lastVerified ?? page.updated} />
         )}
-        <RelatedPages pages={relatedPages(page)} />
+        {members.length === 0 && <RelatedPages pages={relatedPages(page)} />}
         <Feedback />
       </GuideContent>
     </main>

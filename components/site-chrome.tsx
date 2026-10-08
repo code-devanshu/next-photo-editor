@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { BrandMark } from "@/lib/brand-mark";
 import { LockIcon } from "@/lib/icons";
-import { FEATURED_PRESETS, getPage, pagesIn } from "@/lib/pages";
-import { presetSizeRange, presetTitle, type FormPreset } from "@/lib/presets";
+import { PAGES, hubMembers, pagePath, type PageEntry } from "@/lib/pages";
 import { FEEDBACK_URL, SITE_NAME } from "@/lib/site";
 
 export function SkipLink() {
@@ -25,58 +24,37 @@ function Wordmark() {
   );
 }
 
-// Passport and ID documents lead the header nav; exam forms are grouped after them.
-function presetCategory(preset: FormPreset) {
-  return getPage(preset.slug)?.category;
-}
-const ID_PRESETS = FEATURED_PRESETS.filter((preset) => {
-  const category = presetCategory(preset);
-  return category === "id" || category === "visa";
-});
-const EXAM_PRESETS = FEATURED_PRESETS.filter((preset) => !ID_PRESETS.includes(preset));
-// Single limits first, smallest to largest, then the ranges and the minimum page.
-const LIMIT_PAGES = pagesIn("kb").toSorted(
-  (a, b) => Number(!!a.limit?.minKb) - Number(!!b.limit?.minKb) || (a.limit?.maxKb ?? 0) - (b.limit?.maxKb ?? 0)
-);
+const HUBS = PAGES.filter((page) => page.category === "hub");
+// Pages no hub lists, like pixel sizes and the PDF maker, get a column of their own.
+const OTHER_TOOLS = PAGES.filter((page) => page.slug && page.category !== "hub" && !HUBS.some((hub) => hub.hub?.includes(page.category as never)));
+// Each footer column shows this many pages, then a link to the hub for the rest.
+const FOOTER_COLUMN_SIZE = 8;
 
-function FooterPresetList({
-  presets,
-  detail,
-}: {
-  presets: FormPreset[];
-  detail: (preset: FormPreset) => string | null;
-}) {
-  return (
-    <ul className="mt-3 flex flex-col gap-2">
-      {presets.map((preset) => (
-        <li key={preset.slug}>
-          <Link
-            href={`/${preset.slug}`}
-            className="group flex items-baseline gap-3 text-stage-muted transition-colors duration-200 hover:text-stage-text"
-          >
-            <span className="underline-offset-4 group-hover:underline">{presetTitle(preset)}</span>
-            <span className="text-xs text-stage-muted/80">{detail(preset)}</span>
-          </Link>
-        </li>
-      ))}
-    </ul>
+/** KB pages in reading order: single limits smallest first, then ranges and the minimum page. */
+function footerOrder(pages: PageEntry[]) {
+  return pages.toSorted(
+    (a, b) =>
+      Number(!!a.limit?.minKb) - Number(!!b.limit?.minKb) || (a.limit?.maxKb ?? 0) - (b.limit?.maxKb ?? 0)
   );
 }
+
+const linkClass =
+  "text-stage-muted underline-offset-4 transition-colors duration-200 hover:text-stage-text hover:underline";
 
 export function SiteHeader() {
   return (
     <header className="on-dark bg-ink text-stage-text">
       <div className="mx-auto flex h-15 w-full max-w-[88rem] items-center justify-between gap-6 px-4 sm:px-6">
         <Wordmark />
-        <nav aria-label="Photo sizes" className="hidden md:block">
+        <nav aria-label="Main" className="hidden md:block">
           <ul className="flex items-center gap-1">
-            {ID_PRESETS.map((preset) => (
-              <li key={preset.slug}>
+            {HUBS.map((hub) => (
+              <li key={hub.slug}>
                 <Link
-                  href={`/${preset.slug}`}
+                  href={pagePath(hub)}
                   className="rounded-md px-3 py-2 text-sm text-stage-muted transition-colors duration-200 hover:bg-stage-raised hover:text-stage-text"
                 >
-                  {preset.name}
+                  {hub.navName ?? hub.name}
                 </Link>
               </li>
             ))}
@@ -92,10 +70,44 @@ export function SiteHeader() {
   );
 }
 
+function FooterColumn({ title, href, pages }: { title: string; href?: string; pages: PageEntry[] }) {
+  const shown = pages.slice(0, FOOTER_COLUMN_SIZE);
+  const id = `footer-${(href ?? title).replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+  return (
+    <nav aria-labelledby={id}>
+      <h2 id={id} className="signage text-lg text-stage-text">
+        {href ? (
+          <Link href={href} className="underline-offset-4 hover:underline">
+            {title}
+          </Link>
+        ) : (
+          title
+        )}
+      </h2>
+      <ul className="mt-3 flex flex-col gap-2">
+        {shown.map((page) => (
+          <li key={page.slug}>
+            <Link href={pagePath(page)} className={linkClass}>
+              {page.name}
+            </Link>
+          </li>
+        ))}
+        {href && pages.length > shown.length && (
+          <li>
+            <Link href={href} className="font-semibold text-booth underline-offset-4 hover:underline">
+              All {pages.length} →
+            </Link>
+          </li>
+        )}
+      </ul>
+    </nav>
+  );
+}
+
 export function SiteFooter() {
   return (
     <footer className="on-dark bg-ink text-stage-text">
-      <div className="mx-auto grid w-full max-w-[88rem] gap-10 px-4 pt-12 pb-14 text-sm sm:grid-cols-2 sm:gap-x-16 sm:px-6 lg:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
+      <div className="mx-auto grid w-full max-w-[88rem] gap-10 px-4 pt-12 pb-14 text-sm sm:grid-cols-2 sm:gap-x-12 sm:px-6 lg:grid-cols-3 xl:grid-cols-[minmax(0,1.2fr)_repeat(5,minmax(0,1fr))]">
         <div className="flex flex-col gap-3">
           <Wordmark />
           <p className="max-w-[44ch] text-pretty text-stage-muted">
@@ -121,35 +133,15 @@ export function SiteFooter() {
             </a>
           </p>
         </div>
-        <nav aria-labelledby="footer-sizes">
-          <h2 id="footer-sizes" className="signage text-lg text-stage-text">
-            Photo sizes
-          </h2>
-          <FooterPresetList presets={ID_PRESETS} detail={(preset) => preset.spec} />
-        </nav>
-        <nav aria-labelledby="footer-exams">
-          <h2 id="footer-exams" className="signage text-lg text-stage-text">
-            Exam forms
-          </h2>
-          <FooterPresetList presets={EXAM_PRESETS} detail={presetSizeRange} />
-        </nav>
-        <nav aria-labelledby="footer-limits">
-          <h2 id="footer-limits" className="signage text-lg text-stage-text">
-            File size
-          </h2>
-          <ul className="mt-3 flex flex-col gap-2">
-            {LIMIT_PAGES.map((page) => (
-              <li key={page.slug}>
-                <Link
-                  href={`/${page.slug}`}
-                  className="text-stage-muted underline-offset-4 transition-colors duration-200 hover:text-stage-text hover:underline"
-                >
-                  {page.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        {HUBS.map((hub) => (
+          <FooterColumn
+            key={hub.slug}
+            title={hub.navName ?? hub.name}
+            href={pagePath(hub)}
+            pages={hub.hub?.includes("kb") ? footerOrder(hubMembers(hub)) : hubMembers(hub)}
+          />
+        ))}
+        {OTHER_TOOLS.length > 0 && <FooterColumn title="More tools" pages={OTHER_TOOLS} />}
       </div>
     </footer>
   );

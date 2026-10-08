@@ -32,7 +32,7 @@ export const ENTRANCE_PAGES: PageEntry[] = [
     preset: passportPreset("JEE Main", 10, 200),
     title: "JEE Main photo size 2026 (10–200 KB JPG)",
     metaDescription:
-      "Resize your photo for the JEE (Main) 2026 form: a passport size JPG of 10–200 KB, 80% face with ears visible, white background. Free and nothing is uploaded.",
+      "Resize your photo for JEE (Main) 2026: a passport size JPG of 10–200 KB, 80% face with ears visible, on white. Free, and nothing is uploaded.",
     h1: "JEE Main photo resizer",
     h1Accent: ", 10 to 200 KB.",
     intro:

@@ -473,29 +473,42 @@ type RelatedLink = { href: string; name: string; detail: string } & (
 
 function relatedLink(page: PageEntry): RelatedLink {
   const preset = pagePreset(page);
+  const link = { href: pagePath(page), name: page.name };
   if (preset) {
+    const range = presetSizeRange(preset);
     return {
-      href: pagePath(page),
-      name: page.name,
-      detail: `${preset.spec} · ${preset.width}×${preset.height} px`,
+      ...link,
+      detail: `${preset.spec} · ${preset.width}×${preset.height} px${range ? ` · ${range}` : ""}`,
       preset,
     };
   }
-  const kb = page.limit?.maxKb;
-  const link = { href: pagePath(page), name: page.name };
-  return kb
-    ? { ...link, detail: `JPEG under ${kb} KB, any size`, kb }
-    : { ...link, detail: page.metaDescription.split(". ")[0] };
+  const { minKb, maxKb } = page.limit ?? {};
+  if (minKb && maxKb) return { ...link, detail: `JPEG between ${minKb} and ${maxKb} KB`, kb: maxKb };
+  if (maxKb) return { ...link, detail: `JPEG under ${maxKb} KB, any size`, kb: maxKb };
+  if (minKb) return { ...link, detail: `JPEG of at least ${minKb} KB`, kb: minKb };
+  return { ...link, detail: page.metaDescription.split(". ")[0] };
 }
 
-export function RelatedPages({ pages }: { pages: PageEntry[] }) {
+/** Linked cards for other pages: the related block on every page, and the full list on hub pages. */
+export function RelatedPages({
+  pages,
+  title = "Related sizes and forms",
+  id = "related",
+  custom = true,
+}: {
+  pages: PageEntry[];
+  title?: string;
+  id?: string;
+  /** End with a link to the home page's custom size editor. */
+  custom?: boolean;
+}) {
   const links: RelatedLink[] = [
     ...pages.map(relatedLink),
-    { href: "/", name: "Custom size", detail: "Any width × height in pixels" },
+    ...(custom ? [{ href: "/", name: "Custom size", detail: "Any width × height in pixels" }] : []),
   ];
 
   return (
-    <Section id="other-sizes" title="Other photo sizes">
+    <Section id={id} title={title}>
       <ul className="grid gap-3 sm:grid-cols-2">
         {links.map(({ href, name, detail, ...visual }) => (
           <li key={href}>
@@ -523,6 +536,64 @@ export function RelatedPages({ pages }: { pages: PageEntry[] }) {
                 <span className="text-sm text-muted tabular-nums">{detail}</span>
               </span>
               <ArrowIcon className="mb-1 size-5 shrink-0 text-muted transition duration-200 group-hover:translate-x-0.5 group-hover:text-ink" />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
+
+/** The visible trail above the editor. The same trail goes into the page's BreadcrumbList data. */
+export function Breadcrumbs({ crumbs }: { crumbs: { name: string; path: string }[] }) {
+  if (crumbs.length < 2) return null;
+  return (
+    <nav aria-label="Breadcrumb" className="pt-4 text-sm text-muted sm:pt-5">
+      <ol className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        {crumbs.map((crumb, index) => {
+          const last = index === crumbs.length - 1;
+          return (
+            <li key={crumb.path} className="flex items-center gap-2">
+              {last ? (
+                <span aria-current="page" className="font-semibold text-ink">
+                  {crumb.name}
+                </span>
+              ) : (
+                <>
+                  <Link
+                    href={crumb.path}
+                    className="underline decoration-rule-strong underline-offset-4 transition-colors duration-200 hover:text-ink hover:decoration-ink"
+                  >
+                    {crumb.name}
+                  </Link>
+                  <span aria-hidden="true">/</span>
+                </>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
+/** The home page's way into the hubs: one card per hub with how many pages it lists. */
+export function HubLinks({ hubs }: { hubs: { page: PageEntry; count: number }[] }) {
+  return (
+    <Section id="find-your-form" title="Find your form">
+      <ul className="grid gap-3 sm:grid-cols-2">
+        {hubs.map(({ page, count }) => (
+          <li key={page.slug}>
+            <Link
+              href={pagePath(page)}
+              className="group flex h-full flex-col gap-2 rounded-2xl border border-rule bg-surface p-5 transition duration-200 hover:border-ink"
+            >
+              <span className="flex items-center justify-between gap-3">
+                <span className="text-lg font-bold">{page.name}</span>
+                <ArrowIcon className="size-5 shrink-0 text-muted transition duration-200 group-hover:translate-x-0.5 group-hover:text-ink" />
+              </span>
+              <span className="text-[15px] text-pretty text-muted">{page.metaDescription.split(". ")[0]}.</span>
+              <span className="mt-auto text-sm font-semibold tabular-nums">{count} pages</span>
             </Link>
           </li>
         ))}

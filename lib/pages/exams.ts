@@ -24,7 +24,7 @@ export const EXAM_PAGES: PageEntry[] = [
     },
     title: "UPSC photo and signature size (JPG, 20–300 KB)",
     metaDescription:
-      "Resize your photo for the UPSC online application: a JPG between 20 KB and 300 KB, 350 to 1000 pixels per side. Signature steps too. Free, and nothing is uploaded.",
+      "Resize your photo for the UPSC application: a JPG of 20–300 KB, 350 to 1000 pixels per side. Signature steps too. Free, and nothing is uploaded.",
     h1: "UPSC photo resizer",
     h1Accent: ", 20 to 300 KB.",
     intro:
@@ -109,9 +109,9 @@ export const EXAM_PAGES: PageEntry[] = [
       maxKb: 200,
       minKb: 10,
     },
-    title: "NEET photo size (JPG, 10–200 KB) and signature resizer",
+    title: "NEET photo size (JPG, 10–200 KB) & signature",
     metaDescription:
-      "Resize your photo for the NEET (UG) application: a passport size JPG between 10 KB and 200 KB on a white background, face filling 80% of the photo. Free, no upload.",
+      "Resize your photo for NEET (UG): a passport size JPG of 10–200 KB on a white background, face filling 80% of the photo. Free, with no upload.",
     h1: "NEET photo resizer",
     h1Accent: ", 10 to 200 KB.",
     intro:
@@ -192,9 +192,9 @@ export const EXAM_PAGES: PageEntry[] = [
       maxKb: 50,
       minKb: 20,
     },
-    title: "IBPS photo and signature size (200×230 px, 20–50 KB)",
+    title: "IBPS photo & signature size (200×230 px, 20–50 KB)",
     metaDescription:
-      "Resize your photo for IBPS bank exam forms: a 200 × 230 px JPEG between 20 and 50 KB, plus the signature, thumb impression and declaration sizes. Free, no upload.",
+      "Resize your photo for IBPS bank exam forms: 200 × 230 px, a 20–50 KB JPEG, plus the signature, thumb and declaration sizes. Free, no upload.",
     h1: "IBPS photo resizer",
     h1Accent: ", 200 × 230 px.",
     intro:
@@ -274,9 +274,9 @@ export const EXAM_PAGES: PageEntry[] = [
       maxKb: 20,
       minKb: 10,
     },
-    title: "SSC signature resize (6 × 2 cm, 10–20 KB) and photo rules",
+    title: "SSC signature size (6 × 2 cm, 10–20 KB)",
     metaDescription:
-      "Resize your signature for SSC exam forms: a JPEG between 10 and 20 KB, about 6.0 × 2.0 cm. SSC captures your photo live in the form, so the signature is what you upload.",
+      "Resize your signature for SSC forms: a 10–20 KB JPEG, about 6.0 × 2.0 cm. SSC captures your photo live in the form, so the signature is the upload.",
     h1: "SSC signature resizer",
     h1Accent: ", 10 to 20 KB.",
     intro:

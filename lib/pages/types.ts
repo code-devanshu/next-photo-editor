@@ -34,6 +34,8 @@ export type SpecRow = {
 export type PageContent = {
   /** Link text in navigation, related links and breadcrumbs: "PAN card photo". */
   name: string;
+  /** Shorter link text for the header navigation. */
+  navName?: string;
   /** Page title without the " — FormPic" suffix. Keep the full title under about 60 characters. */
   title: string;
   /** Under about 155 characters. */
@@ -54,6 +56,8 @@ export type PageContent = {
   /** Reasons this form rejects uploads, most common first. */
   rejections?: { title: string; items: string[] };
   faqs: Faq[];
+  /** Heading for a hub page's list of pages. */
+  listTitle?: string;
 };
 
 /** Tool settings for a page with a fixed size. The page slug becomes the preset slug. */
