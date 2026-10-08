@@ -3,7 +3,7 @@ import { OLD_HOSTS, PATH_REDIRECTS } from "./lib/redirects";
 import { SITE_URL } from "./lib/site";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["192.168.1.3"],
+  allowedDevOrigins: ["192.168.1.4"],
   experimental: {
     // Most visitors arrive once from search, so styles inline in the HTML beat a cached stylesheet:
     // no render-blocking CSS request before the first paint.

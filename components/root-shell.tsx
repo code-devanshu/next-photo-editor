@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import { SiteFooter, SiteHeader, SkipLink } from "@/components/site-chrome";
 import { siteSchema } from "@/lib/schema";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, jsonLd } from "@/lib/site";
@@ -26,6 +27,10 @@ const archivo = localFont({
 // in Google Search Console and Bing Webmaster Tools.
 const googleVerification = process.env.GOOGLE_SITE_VERIFICATION;
 const bingVerification = process.env.BING_SITE_VERIFICATION;
+
+// GA4 loads only in production builds with the ID set, so local dev doesn't pollute the data.
+// Enhanced measurement tracks client-side navigation, so there are no manual page_view calls.
+const gaId = process.env.NODE_ENV === "production" ? process.env.NEXT_PUBLIC_GA_ID : undefined;
 
 /** Metadata shared by both root layouts. Pages set their own title, description and alternates. */
 export const rootMetadata: Metadata = {
@@ -62,6 +67,7 @@ export function RootShell({ lang, children }: { lang: Lang; children: React.Reac
         {children}
         <SiteFooter lang={lang} />
       </body>
+      {gaId && <GoogleAnalytics gaId={gaId} />}
     </html>
   );
 }

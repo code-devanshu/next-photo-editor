@@ -58,31 +58,14 @@
 @theme {
   --ease-mech: cubic-bezier(0.2, 0.8, 0.2, 1);
 
-  --shadow-print: 0 1px 2px rgb(20 20 20 / 0.18), 0 10px 24px -10px rgb(20 20 20 / 0.45);
   --shadow-panel: 0 1px 2px rgb(20 20 20 / 0.06), 0 16px 36px -22px rgb(20 20 20 / 0.35);
   --shadow-key: inset 0 -2px 0 rgb(20 20 20 / 0.16), 0 1px 2px rgb(20 20 20 / 0.2);
 
-  --animate-deliver: deliver 0.75s var(--ease-mech) both;
-  --animate-develop: develop 1.3s var(--ease-mech) both;
   --animate-refresh: refresh 0.32s var(--ease-mech) both;
   --animate-shimmer: shimmer 1.4s ease-in-out infinite;
   --animate-live: live 1.6s ease-in-out infinite;
 
-  /* The print slides down out of the delivery slot... */
-  @keyframes deliver {
-    from {
-      transform: translateY(-105%);
-    }
-  }
-
-  /* ...and develops from a pale, flat image to full tone. */
-  @keyframes develop {
-    from {
-      filter: grayscale(1) contrast(0.45) brightness(1.55);
-    }
-  }
-
-  /* Later prints fade up in place instead of being delivered again. */
+  /* A new preview fades up in place. */
   @keyframes refresh {
     from {
       opacity: 0.35;

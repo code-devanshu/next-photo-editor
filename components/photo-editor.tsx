@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import type { Crop, PixelCrop } from "react-image-crop";
 import { centerCrop, convertToPixelCrop, makeAspectCrop } from "@/lib/crop";
 import { PresetOutline } from "@/components/preset-outline";
+import { trackEvent } from "@/lib/analytics";
 import {
   canvasToBlob,
   downloadBlob,
@@ -220,6 +221,11 @@ function FrameGuide({
 /** Text for the Other field: a typed limit, or empty when a one-tap choice (or none) is on. */
 function customLimitText(kb: number | null) {
   return kb && !LIMIT_CHOICES.includes(kb) ? String(kb) : "";
+}
+
+/** The preset as a short analytics value: "/pan-card-photo" → "pan_card_photo", "custom" without one. */
+function presetEventValue(preset: FormPreset | undefined) {
+  return preset ? preset.slug.replace(/^\//, "").replace(/-/g, "_") : "custom";
 }
 
 function presetCaption(t: EditorText, preset: FormPreset | undefined, maxKb?: number | null) {
@@ -476,7 +482,7 @@ export default function PhotoEditor({
         const captured = new File([blob], `camera-${Date.now()}.jpg`, {
           type: "image/jpeg",
         });
-        validateAndLoadFile(captured);
+        validateAndLoadFile(captured, "camera");
         closeCamera();
       },
       "image/jpeg",
@@ -484,7 +490,7 @@ export default function PhotoEditor({
     );
   }
 
-  function validateAndLoadFile(candidate: File | undefined) {
+  function validateAndLoadFile(candidate: File | undefined, source: "upload" | "camera" = "upload") {
     if (!candidate) return;
     setError(null);
 
@@ -511,6 +517,7 @@ export default function PhotoEditor({
     setAspect(chosenPreset?.aspect);
     setPreviewUrl(null);
     setPreviewSize(null);
+    trackEvent("photo_added", { source });
   }
 
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
@@ -549,6 +556,7 @@ export default function PhotoEditor({
   }
 
   function choosePreset(preset: FormPreset | undefined) {
+    trackEvent("preset_selected", { preset: presetEventValue(preset) });
     setChosenPreset(preset);
     setMinOverride(undefined);
     if (preset) {
@@ -558,6 +566,7 @@ export default function PhotoEditor({
   }
 
   function handleFormPresetClick(preset: FormPreset) {
+    trackEvent("preset_selected", { preset: presetEventValue(preset) });
     setChosenPreset(preset);
     setMinOverride(undefined);
     handleAspectClick(preset.aspect);
@@ -643,6 +652,16 @@ export default function PhotoEditor({
     return `${baseName}.${format === "png" ? "png" : "jpg"}`;
   }
 
+  /** Event params for a finished download or share: no file name or image data. */
+  function exportEventParams(blob: Blob, method: "download" | "share") {
+    return {
+      preset: presetEventValue(chosenPreset),
+      format,
+      size_kb: Math.round(blob.size / BYTES_PER_KB),
+      method,
+    };
+  }
+
   async function exportBlob(): Promise<Blob | null> {
     if (!completedCrop || !imgRef.current || !targetWidth || !targetHeight) return null;
     const canvas = renderCanvas(imgRef.current, completedCrop, targetWidth, targetHeight);
@@ -707,6 +726,7 @@ export default function PhotoEditor({
         return;
       }
       downloadBlob(blob, getExportFilename());
+      trackEvent("photo_downloaded", exportEventParams(blob, "download"));
     } catch {
       setError(t.errors.export);
     }
@@ -725,6 +745,7 @@ export default function PhotoEditor({
         return;
       }
       await navigator.share({ files: [shareFile] });
+      trackEvent("photo_shared", exportEventParams(blob, "share"));
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       setError(t.errors.share);
@@ -1316,47 +1337,48 @@ export default function PhotoEditor({
                 )}
               </div>
 
-              <div className="relative">
+              {/* The finished file, with its exact size and weight, before anything is downloaded. */}
+              <div className="flex items-center gap-4 rounded-xl bg-surface/70 p-3 ring-1 ring-ink/10">
                 <div
-                  aria-hidden="true"
-                  className="relative z-10 h-5 rounded-[5px] bg-ink shadow-[inset_0_-4px_0_#000,inset_0_1px_0_rgb(255_255_255/0.12),0_1px_0_rgb(255_255_255/0.35)]"
-                />
-                <div className="-mt-2 flex min-h-40 justify-center overflow-hidden px-4 pb-2">
+                  className={`flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-ink/6 ${
+                    previewUrl && format === "png" ? "checker" : ""
+                  }`}
+                >
                   {previewUrl ? (
-                    <figure key={imageSrc} className="relative flex h-fit w-min animate-deliver flex-col bg-surface p-2 pt-3.5 pb-0 shadow-print">
-                      {/* The slot's lip shadows the print's top edge as it comes out. */}
-                      <span
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-x-0 top-0 z-10 h-4 bg-linear-to-b from-black/30 to-transparent"
-                      />
-                      <div className={`animate-develop ${format === "png" ? "checker" : ""}`}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          key={previewUrl}
-                          src={previewUrl}
-                          alt={t.previewAlt}
-                          className="block h-32 w-auto max-w-none animate-refresh"
-                        />
-                      </div>
-                      <figcaption className="py-2 text-center text-[11px] leading-snug font-semibold text-balance text-ink-soft tabular-nums">
-                        {targetWidth} × {targetHeight} px · {formatLabel}
-                        {sizeLabel && ` · ${sizeLabel}`}
-                      </figcaption>
-                    </figure>
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={previewUrl}
+                      src={previewUrl}
+                      alt={t.previewAlt}
+                      className="max-h-full max-w-full animate-refresh object-contain"
+                    />
                   ) : showSkeleton ? (
-                    <div className="flex h-fit flex-col bg-surface p-2 pt-3.5 shadow-print" aria-hidden="true">
-                      <div
-                        className="skeleton h-32 max-w-full animate-shimmer"
-                        style={{ aspectRatio: `${targetWidth} / ${targetHeight}` }}
-                      />
-                      <div className="h-7" />
-                    </div>
-                  ) : (
-                    <p className="pt-12 text-center text-sm text-pretty text-ink/75">
-                      {t.printComesOut}
-                    </p>
-                  )}
+                    <div
+                      aria-hidden="true"
+                      className="skeleton max-h-full max-w-full animate-shimmer"
+                      style={{
+                        aspectRatio: `${targetWidth} / ${targetHeight}`,
+                        [targetWidth >= targetHeight ? "width" : "height"]: "100%",
+                      }}
+                    />
+                  ) : null}
                 </div>
+                {previewUrl || showSkeleton ? (
+                  <dl className="grid min-w-0 flex-1 gap-1.5 text-sm">
+                    {[
+                      [t.fileDimensions, `${targetWidth} × ${targetHeight} px`],
+                      [t.fileFormat, formatLabel],
+                      [t.fileSize, sizeLabel ?? "…"],
+                    ].map(([label, value]) => (
+                      <div key={label} className="flex items-baseline justify-between gap-3">
+                        <dt className="text-xs text-ink/70">{label}</dt>
+                        <dd className="font-bold text-ink tabular-nums">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : (
+                  <p className="text-sm text-pretty text-ink/75">{t.printComesOut}</p>
+                )}
               </div>
 
               <div className="flex flex-col gap-2">
@@ -1369,11 +1391,6 @@ export default function PhotoEditor({
                 >
                   <DownloadIcon className="size-4.5 transition duration-200 group-hover:translate-y-px" />
                   {t.downloadFormat(formatLabel)}
-                  {sizeLabel && (
-                    <span className="tabular-nums">
-                      · {targetWidth} × {targetHeight} px · {sizeLabel}
-                    </span>
-                  )}
                 </button>
                 <div className="flex items-center gap-2">
                   {canShareFiles && (
@@ -1419,12 +1436,10 @@ export default function PhotoEditor({
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-booth px-4 py-3 text-[15px] font-bold text-ink transition duration-200 active:scale-[0.99] disabled:opacity-45"
             >
               <DownloadIcon className="size-4.5" />
-              {t.downloadFormat(formatLabel)}
-              {sizeLabel && (
-                <span className="tabular-nums">
-                  · {targetWidth} × {targetHeight} px · {sizeLabel}
-                </span>
-              )}
+              <span className="whitespace-nowrap">
+                {t.downloadFormat(formatLabel)}
+                {sizeLabel && <span className="font-semibold text-ink/70 tabular-nums"> · {sizeLabel}</span>}
+              </span>
             </button>
           </div>
         </>

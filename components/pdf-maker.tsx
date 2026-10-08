@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 import { downloadBlob, encodeCanvas, formatBytes } from "@/lib/image-export";
 import { AlertIcon, CloseIcon, DownloadIcon, ImageIcon, LockIcon } from "@/lib/icons";
 import { buildPdf, pdfOverhead, type PdfImage } from "@/lib/pdf";
@@ -177,6 +178,7 @@ export default function PdfMaker({
     if (!result) return;
     const base = pages[0]?.file.name.replace(/\.[^.]+$/, "") ?? "document";
     downloadBlob(result.blob, `${base}.pdf`);
+    trackEvent("pdf_downloaded", { page_count: pages.length });
   }
 
   const sizeLabel = result ? formatBytes(result.blob.size) : null;
