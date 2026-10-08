@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { LandingPage } from "@/components/landing-page";
-import { SUBPAGES, getPage, pagePath } from "@/lib/pages";
-import { pageMetadata } from "@/lib/site";
+import { SUBPAGES, getPage } from "@/lib/pages";
+import { buildMetadata } from "@/lib/page-metadata";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -15,16 +15,11 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const page = getPage((await params).slug);
-  if (!page) return {};
-  return pageMetadata({
-    title: page.title,
-    description: page.metaDescription,
-    path: pagePath(page),
-  });
+  return page ? buildMetadata(page, "en") : {};
 }
 
 export default async function Page({ params }: Props) {
   const page = getPage((await params).slug);
   if (!page) notFound();
-  return <LandingPage page={page} />;
+  return <LandingPage page={page} lang="en" />;
 }

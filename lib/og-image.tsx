@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { BrandMark } from "@/lib/brand-mark";
-import { SUBPAGES, getPage, pagePreset } from "@/lib/pages";
+import { HINDI_PAGES, SUBPAGES, getPage, pagePreset } from "@/lib/pages";
 import { SITE_NAME } from "@/lib/site";
 
 const INK = "#141414";
@@ -105,6 +105,11 @@ export async function renderShareImage({ title, detail }: { title: string; detai
 /** Every subpage's slug, for the opengraph-image and twitter-image routes under app/[slug]. */
 export function guideImageParams() {
   return SUBPAGES.map(({ slug }) => ({ slug }));
+}
+
+/** Subpages with a Hindi version, for the image routes under app/(hi)/hi/[slug]. They reuse the English card. */
+export function hindiImageParams() {
+  return HINDI_PAGES.filter((page) => page.slug).map(({ slug }) => ({ slug }));
 }
 
 export function guideImageAlt(slug: string) {

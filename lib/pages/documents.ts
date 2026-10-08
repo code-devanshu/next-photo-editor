@@ -161,6 +161,13 @@ export const DOCUMENT_PAGES: PageEntry[] = [
       { label: "File size", value: "≤ 240 KB", note: "for digital uploads" },
       { label: "Head size", value: "50–69%", note: "of the image height" },
     ],
+    spec: {
+      title: "US passport and visa photo specification",
+      rows: [
+        { item: "Printed photo", printSize: "2 × 2 in (51 × 51 mm)", notes: "Head 50–69% of the image height" },
+        { item: "Digital photo (DS-160)", pixels: "600 × 600 to 1200 × 1200 px, square", maxKb: 240, format: "JPEG" },
+      ],
+    },
     requirements: {
       title: "US passport or visa photo requirements",
       items: [
@@ -247,6 +254,13 @@ export const DOCUMENT_PAGES: PageEntry[] = [
       { label: "File size", value: "≤ 20 KB", note: "Protean scan spec" },
       { label: "Signature", value: "354 × 157 px", note: "4.5 × 2 cm, ≤ 10 KB" },
     ],
+    spec: {
+      title: "PAN card upload specification (Protean)",
+      rows: [
+        { item: "Photograph", printSize: "2.5 × 3.5 cm", dpi: 200, maxKb: 20, format: "JPEG", notes: "Colour. Protean writes the size as 3.5 × 2.5 cm, height first" },
+        { item: "Signature", printSize: "4.5 × 2 cm", dpi: 200, maxKb: 10, format: "JPEG" },
+      ],
+    },
     requirements: {
       title: "PAN card photo requirements",
       items: [

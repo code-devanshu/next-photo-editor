@@ -23,6 +23,7 @@ import {
   type ExportFormat,
   type FitStatus,
 } from "@/lib/image-export";
+import { EDITOR_TEXT, type EditorText, type Lang } from "@/lib/editor-text";
 import type { FormPreset } from "@/lib/presets";
 import {
   AlertIcon,
@@ -41,7 +42,7 @@ const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
 const ASPECT_PRESETS: { label: string; value: number | undefined }[] = [
-  { label: "Free", value: undefined },
+  { label: "free", value: undefined },
   { label: "1:1", value: 1 },
   { label: "4:5", value: 4 / 5 },
   { label: "16:9", value: 16 / 9 },
@@ -62,9 +63,6 @@ const ENLARGE_MARGIN = 1.2;
 // How close the output's shape must stay to the preset's for the preset's minimum to still apply.
 const SHAPE_TOLERANCE = 0.02;
 
-// The booth's instruction panel. Same order as the editor's numbered sections.
-const STEPS = ["Add a photo", "Pick the size", "Frame your face", "Download"];
-const PROMISES = ["Free", "No sign-up", "No watermark", "Never uploaded"];
 
 // Outlines in the size registry are drawn at this many px per mm, so they compare at true scale.
 const REGISTRY_SCALE = 1.1;
@@ -222,9 +220,9 @@ function customLimitText(kb: number | null) {
   return kb && !LIMIT_CHOICES.includes(kb) ? String(kb) : "";
 }
 
-function presetCaption(preset: FormPreset | undefined, maxKb?: number | null) {
+function presetCaption(t: EditorText, preset: FormPreset | undefined, maxKb?: number | null) {
   if (preset) return `${preset.spec.replace("×", " × ")} · ${preset.width} × ${preset.height} px`;
-  return maxKb ? `Any size · under ${maxKb} KB` : "Any size";
+  return maxKb ? t.anySizeUnder(maxKb) : t.anySize;
 }
 
 function subscribeNoop() {
@@ -268,6 +266,7 @@ export default function PhotoEditor({
   minKb: initialMinKb,
   kind: initialKind,
   stamp: initialStamp = false,
+  lang = "en",
 }: {
   title: string;
   titleAccent: string;
@@ -284,7 +283,9 @@ export default function PhotoEditor({
   kind?: FormPreset["kind"];
   /** Start with the name and date strip turned on. */
   stamp?: boolean;
+  lang?: Lang;
 }) {
+  const t = EDITOR_TEXT[lang];
   const pickerPresets =
     initialPreset && !featuredPresets.some((preset) => preset.slug === initialPreset.slug)
       ? [initialPreset, ...featuredPresets]
@@ -388,7 +389,7 @@ export default function PhotoEditor({
         });
         if (cancelled) return;
         if (!encoded) {
-          setError("Could not generate a preview for this image.");
+          setError(t.errors.preview);
           return;
         }
         setPreviewUrl((prev) => {
@@ -400,7 +401,7 @@ export default function PhotoEditor({
           limitBytes || minBytes ? { quality: encoded.quality, status: encoded.status } : null
         );
       } catch {
-        if (!cancelled) setError("Could not generate a preview for this image.");
+        if (!cancelled) setError(t.errors.preview);
       }
     }, 150);
 
@@ -436,7 +437,7 @@ export default function PhotoEditor({
   async function openCamera() {
     setError(null);
     if (!navigator.mediaDevices?.getUserMedia) {
-      setError("Camera access isn't supported in this browser.");
+      setError(t.errors.cameraUnsupported);
       return;
     }
     try {
@@ -447,7 +448,7 @@ export default function PhotoEditor({
       streamRef.current = stream;
       setIsCameraOpen(true);
     } catch {
-      setError("Couldn't access the camera. Check permissions and try again.");
+      setError(t.errors.cameraDenied);
     }
   }
 
@@ -485,15 +486,11 @@ export default function PhotoEditor({
     setError(null);
 
     if (!ACCEPTED_TYPES.includes(candidate.type)) {
-      setError("Unsupported file type. Please upload a JPG, PNG, or WEBP image.");
+      setError(t.errors.fileType);
       return;
     }
     if (candidate.size > MAX_FILE_SIZE) {
-      setError(
-        `File is too large (${formatBytes(candidate.size)}). Maximum size is ${formatBytes(
-          MAX_FILE_SIZE
-        )}.`
-      );
+      setError(t.errors.fileSize(formatBytes(candidate.size), formatBytes(MAX_FILE_SIZE)));
       return;
     }
 
@@ -677,7 +674,7 @@ export default function PhotoEditor({
       setTargetWidth(Math.max(1, Math.round(targetWidth * scale)));
       setTargetHeight(Math.max(1, Math.round(targetHeight * scale)));
     } catch {
-      setError("Could not resize this image. Try a smaller width and height.");
+      setError(t.errors.shrink);
     }
   }
 
@@ -695,7 +692,7 @@ export default function PhotoEditor({
       setTargetWidth(Math.ceil(targetWidth * scale));
       setTargetHeight(Math.ceil(targetHeight * scale));
     } catch {
-      setError("Could not resize this image. Try a larger width and height.");
+      setError(t.errors.enlarge);
     }
   }
 
@@ -703,12 +700,12 @@ export default function PhotoEditor({
     try {
       const blob = await exportBlob();
       if (!blob) {
-        setError("Export failed. Please try a different image or settings.");
+        setError(t.errors.export);
         return;
       }
       downloadBlob(blob, getExportFilename());
     } catch {
-      setError("Export failed. Please try a different image or settings.");
+      setError(t.errors.export);
     }
   }
 
@@ -716,18 +713,18 @@ export default function PhotoEditor({
     try {
       const blob = await exportBlob();
       if (!blob) {
-        setError("Export failed. Please try a different image or settings.");
+        setError(t.errors.export);
         return;
       }
       const shareFile = new File([blob], getExportFilename(), { type: blob.type });
       if (!navigator.canShare?.({ files: [shareFile] })) {
-        setError("Direct sharing isn't supported in this browser. Please download and share manually.");
+        setError(t.errors.shareUnsupported);
         return;
       }
       await navigator.share({ files: [shareFile] });
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
-      setError("Sharing failed. Please try downloading instead.");
+      setError(t.errors.share);
     }
   }
 
@@ -762,7 +759,7 @@ export default function PhotoEditor({
       <button
         type="button"
         onClick={() => setError(null)}
-        aria-label="Dismiss"
+        aria-label={t.dismiss}
         className="-m-1 rounded-md p-1 text-curtain-ink/70 transition duration-200 hover:bg-curtain/10 hover:text-curtain-ink"
       >
         <CloseIcon className="size-4" />
@@ -815,12 +812,12 @@ export default function PhotoEditor({
                 <span className="pointer-events-none flex flex-col items-center gap-4 sm:gap-6">
                   <FrameGuide
                     aspect={chosenPreset?.aspect ?? 4 / 5}
-                    caption={presetCaption(chosenPreset, maxKb)}
+                    caption={presetCaption(t, chosenPreset, maxKb)}
                     kind={chosenPreset?.kind ?? initialKind}
                   />
                   <span className="flex flex-col gap-1.5">
                     <span className="signage hidden text-[2rem] sm:block">
-                      {isDragging ? "Release to load your photo" : "Drop a photo here"}
+                      {isDragging ? t.releaseToLoad : t.dropHere}
                     </span>
                     <span className="text-sm text-stage-muted">JPG, PNG or WEBP, up to 20 MB</span>
                   </span>
@@ -828,7 +825,7 @@ export default function PhotoEditor({
                 <span className="flex flex-wrap items-center justify-center gap-2.5">
                   <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-booth px-5 py-3 text-[15px] font-bold text-ink shadow-key transition duration-200 hover:bg-booth-deep active:scale-[0.98] has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-booth">
                     <ImageIcon className="size-4.5" />
-                    Choose photo
+                    {t.choosePhoto}
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -843,13 +840,13 @@ export default function PhotoEditor({
                     className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-[15px] font-bold text-stage-text ring-2 ring-booth transition duration-200 ring-inset hover:bg-stage-raised active:scale-[0.98]"
                   >
                     <CameraIcon className="size-4.5 text-booth" />
-                    Use camera
+                    {t.useCamera}
                   </button>
                 </span>
               </div>
               <p className="flex items-center justify-center gap-1.5 px-3 pt-2.5 pb-1 text-xs text-stage-muted">
                 <LockIcon className="size-3.5 text-booth" />
-                Your photo stays on this device. Nothing is uploaded.
+                {t.staysOnDevice}
               </p>
             </div>
 
@@ -858,9 +855,9 @@ export default function PhotoEditor({
             <div className="rounded-[22px] border border-rule bg-surface p-5 shadow-panel sm:p-6">
               <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                 <h2 id="registry-heading" className="signage text-[22px]">
-                  Pick the size
+                  {t.pickSize}
                 </h2>
-                <p className="text-sm text-muted">You can change it after adding the photo.</p>
+                <p className="text-sm text-muted">{t.changeLater}</p>
               </div>
               <div
                 role="group"
@@ -899,7 +896,7 @@ export default function PhotoEditor({
                       </span>
                       <span className="flex flex-col gap-0.5">
                         <span className="text-sm leading-snug font-semibold">
-                          {preset ? preset.name : "Custom size"}
+                          {preset ? preset.name : t.customSize}
                         </span>
                         <span
                           className={`flex flex-col text-xs tabular-nums ${active ? "text-stage-muted" : "text-muted"}`}
@@ -913,8 +910,8 @@ export default function PhotoEditor({
                             </>
                           ) : (
                             <>
-                              <span>Any width × height</span>
-                              <span>Set in pixels</span>
+                              <span>{t.anyWidthHeight}</span>
+                              <span>{t.setInPixels}</span>
                             </>
                           )}
                         </span>
@@ -928,8 +925,8 @@ export default function PhotoEditor({
 
           <div className="flex flex-col gap-7 rounded-[22px] bg-booth p-6 text-ink sm:p-8 lg:col-span-5 lg:col-start-1 lg:row-start-2 lg:rounded-t-none lg:p-10 lg:pt-7">
             <p className="max-w-[46ch] text-[17px] leading-relaxed text-pretty text-ink/80">{intro}</p>
-            <ol aria-label="How it works" className="grid grid-cols-2 gap-x-4 gap-y-3 border-t-2 border-ink pt-5 lg:grid-cols-1 lg:pt-6">
-              {STEPS.map((step, index) => (
+            <ol aria-label={t.howItWorks} className="grid grid-cols-2 gap-x-4 gap-y-3 border-t-2 border-ink pt-5 lg:grid-cols-1 lg:pt-6">
+              {t.steps.map((step, index) => (
                 <li key={step} className="flex items-center gap-3.5">
                   <StepDisc step={index + 1} />
                   <span className="text-[15px] leading-tight font-semibold lg:text-[17px]">{step}</span>
@@ -937,10 +934,10 @@ export default function PhotoEditor({
               ))}
             </ol>
             <ul
-              aria-label="What you get"
+              aria-label={t.whatYouGet}
               className="mt-auto flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold"
             >
-              {PROMISES.map((promise) => (
+              {t.promises.map((promise) => (
                 <li key={promise} className="flex items-center gap-2">
                   <span aria-hidden="true" className="size-1.5 bg-ink" />
                   {promise}
@@ -951,7 +948,7 @@ export default function PhotoEditor({
         </section>
       ) : (
         <>
-          <h1 className="sr-only">Edit photo</h1>
+          <h1 className="sr-only">{t.editPhoto}</h1>
           {errorBanner && <div className="pt-4">{errorBanner}</div>}
           <div className="grid grid-cols-1 pt-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:grid-rows-[auto_auto_1fr] lg:gap-x-5">
             <section
@@ -959,10 +956,10 @@ export default function PhotoEditor({
               className="mb-4 flex flex-col gap-4 rounded-[22px] bg-booth p-5 text-ink lg:col-start-2 lg:row-start-2 lg:mb-0 lg:rounded-b-none"
             >
               <StepHeading step={2} id="size-heading">
-                Pick the size
+                {t.pickSize}
               </StepHeading>
 
-              <div role="group" aria-label="Form and ID presets" className="grid grid-cols-3 gap-1.5">
+              <div role="group" aria-label={t.presetsLabel} className="grid grid-cols-3 gap-1.5">
                 {pickerPresets.map((preset) => {
                   const active =
                     aspect === preset.aspect &&
@@ -1000,13 +997,13 @@ export default function PhotoEditor({
 
               <div className="flex flex-col gap-2 border-t border-ink/25 pt-3">
                 <div className="flex items-end gap-2">
-                  <PixelInput label="Width in pixels" value={targetWidth} onChange={handleWidthChange} />
+                  <PixelInput label={t.widthLabel} value={targetWidth} onChange={handleWidthChange} />
                   <button
                     type="button"
                     onClick={toggleLockAspect}
                     aria-pressed={lockAspect}
-                    aria-label="Lock aspect ratio"
-                    title={lockAspect ? "Aspect ratio locked" : "Aspect ratio unlocked"}
+                    aria-label={t.lockAspect}
+                    title={lockAspect ? t.aspectLocked : t.aspectUnlocked}
                     className={`inline-flex size-11 shrink-0 items-center justify-center rounded-lg border transition duration-200 active:scale-95 ${
                       lockAspect
                         ? "border-ink bg-ink text-booth"
@@ -1015,7 +1012,7 @@ export default function PhotoEditor({
                   >
                     {lockAspect ? <LockIcon className="size-4" /> : <LockOpenIcon className="size-4" />}
                   </button>
-                  <PixelInput label="Height in pixels" value={targetHeight} onChange={handleHeightChange} />
+                  <PixelInput label={t.heightLabel} value={targetHeight} onChange={handleHeightChange} />
                 </div>
               </div>
 
@@ -1028,23 +1025,23 @@ export default function PhotoEditor({
                       onChange={(e) => setStampOn(e.target.checked)}
                       className="size-4 accent-ink"
                     />
-                    Name and date on photo
+                    {t.stampToggle}
                   </label>
                   {stampOn && (
                     <div className="flex gap-2">
                       <label className="flex min-w-0 flex-1 flex-col gap-1.5">
-                        <span className="text-xs font-medium text-ink/75">Name</span>
+                        <span className="text-xs font-medium text-ink/75">{t.stampName}</span>
                         <input
                           type="text"
                           value={stampName}
                           onChange={(e) => setStampName(e.target.value)}
-                          placeholder="As on the form"
+                          placeholder={t.stampNamePlaceholder}
                           autoComplete="name"
                           className="w-full rounded-lg border border-ink/40 bg-surface/60 px-3 py-2 text-[15px] font-semibold uppercase placeholder:font-normal placeholder:normal-case placeholder:text-ink/60 focus:border-ink focus:bg-surface focus:ring-3 focus:ring-ink/20 focus:outline-none"
                         />
                       </label>
                       <label className="flex w-40 shrink-0 flex-col gap-1.5">
-                        <span className="text-xs font-medium text-ink/75">Date of photo</span>
+                        <span className="text-xs font-medium text-ink/75">{t.stampDate}</span>
                         <input
                           type="date"
                           value={stampDate}
@@ -1056,7 +1053,7 @@ export default function PhotoEditor({
                   )}
                   {stampOn && (
                     <p className="text-xs text-pretty text-ink/75">
-                      The strip covers the bottom {Math.round(STAMP_BAND * 100)}% of the photo, so leave room below your chin.
+                      {t.stampNote(Math.round(STAMP_BAND * 100))}
                     </p>
                   )}
                 </div>
@@ -1065,12 +1062,12 @@ export default function PhotoEditor({
 
             <div className="on-dark flex flex-wrap items-center gap-x-4 gap-y-3 rounded-t-[22px] bg-ink px-4 py-2.5 text-stage-text lg:col-span-2 lg:row-start-1 lg:mb-4 lg:rounded-[22px]">
               <StepHeading step={3} id="frame-heading" onDark>
-                Frame your face
+                {t.frameFace}
               </StepHeading>
               <div className="flex max-w-full items-center gap-1.5">
                 <div
                   role="group"
-                  aria-label="Aspect ratio"
+                  aria-label={t.aspectLabel}
                   className="inline-flex max-w-full overflow-x-auto rounded-lg bg-stage-raised p-1 ring-1 ring-stage-line ring-inset"
                 >
                   {ASPECT_PRESETS.map((preset) => (
@@ -1081,15 +1078,15 @@ export default function PhotoEditor({
                       onClick={() => handleAspectClick(preset.value)}
                       className={segmentClass(aspect === preset.value, true)}
                     >
-                      {preset.label}
+                      {preset.label === "free" ? t.free : preset.label}
                     </button>
                   ))}
                 </div>
                 <button
                   type="button"
                   onClick={() => rotateBy(-90)}
-                  aria-label="Rotate left 90°"
-                  title="Rotate left 90°"
+                  aria-label={t.rotateLeft}
+                  title={t.rotateLeft}
                   className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-stage-muted transition duration-200 hover:bg-stage-raised hover:text-stage-text active:scale-95"
                 >
                   <RotateLeftIcon className="size-4.5" />
@@ -1097,8 +1094,8 @@ export default function PhotoEditor({
                 <button
                   type="button"
                   onClick={() => rotateBy(90)}
-                  aria-label="Rotate right 90°"
-                  title="Rotate right 90°"
+                  aria-label={t.rotateRight}
+                  title={t.rotateRight}
                   className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-stage-muted transition duration-200 hover:bg-stage-raised hover:text-stage-text active:scale-95"
                 >
                   <RotateRightIcon className="size-4.5" />
@@ -1111,7 +1108,7 @@ export default function PhotoEditor({
                     {originalDims.width} × {originalDims.height} px
                   </span>
                   <span>{formatBytes(file.size)}</span>
-                  {rotation !== 0 && <span>Rotated {rotation}°</span>}
+                  {rotation !== 0 && <span>{t.rotated(rotation)}</span>}
                 </p>
               )}
             </div>
@@ -1137,9 +1134,9 @@ export default function PhotoEditor({
                 <img
                   ref={imgRef}
                   src={rotatedSrc ?? imageSrc}
-                  alt="Uploaded image to crop"
+                  alt={t.cropAlt}
                   onLoad={onImageLoad}
-                  onError={() => setError("This file could not be read as an image.")}
+                  onError={() => setError(t.errors.unreadable)}
                   className="max-h-[min(64dvh,36rem)] max-w-full"
                 />
               </ReactCrop>
@@ -1151,11 +1148,11 @@ export default function PhotoEditor({
             >
               <div className="flex items-center justify-between gap-3">
                 <StepHeading step={4} id="download-heading">
-                  Download
+                  {t.download}
                 </StepHeading>
                 <div
                     role="group"
-                    aria-label="Export format"
+                    aria-label={t.exportFormat}
                     className="inline-flex rounded-lg bg-ink/10 p-1 ring-1 ring-ink/20 ring-inset"
                   >
                     {(["jpeg", "png"] as ExportFormat[]).map((f) => (
@@ -1177,7 +1174,7 @@ export default function PhotoEditor({
                   <>
                     <div className="flex flex-col gap-2">
                       <span id="limit-label" className="text-xs font-semibold text-ink/75">
-                        Max file size
+                        {t.maxFileSize}
                       </span>
                       <div className="flex items-center gap-1.5">
                         <div
@@ -1193,17 +1190,17 @@ export default function PhotoEditor({
                               onClick={() => applyLimit(kb)}
                               className={`${segmentClass(maxKb === kb)} ${maxKb === kb ? "" : "text-ink/70"}`}
                             >
-                              {kb ? `${kb} KB` : "Any"}
+                              {kb ? `${kb} KB` : t.any}
                             </button>
                           ))}
                         </div>
                         <label className="relative min-w-0 flex-1">
-                          <span className="sr-only">Other limit in KB</span>
+                          <span className="sr-only">{t.otherLimit}</span>
                           <input
                             type="number"
                             min={1}
                             inputMode="numeric"
-                            placeholder="Other"
+                            placeholder={t.other}
                             value={customKb}
                             onChange={(e) => handleLimitInput(e.target.value)}
                             className="w-full [appearance:textfield] rounded-lg border border-ink/40 bg-surface/60 py-2 pr-8 pl-2.5 text-[13px] font-semibold tabular-nums transition-[border-color,box-shadow] duration-200 placeholder:font-normal placeholder:text-ink/60 hover:border-ink/60 focus:border-ink focus:bg-surface focus:ring-3 focus:ring-ink/20 focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
@@ -1217,13 +1214,13 @@ export default function PhotoEditor({
                         </label>
                       </div>
                       <label className="flex items-center justify-between gap-3">
-                        <span className="text-xs font-semibold text-ink/75">Min file size</span>
+                        <span className="text-xs font-semibold text-ink/75">{t.minFileSize}</span>
                         <span className="relative w-28">
                           <input
                             type="number"
                             min={1}
                             inputMode="numeric"
-                            placeholder="None"
+                            placeholder={t.none}
                             value={minKb ?? ""}
                             onChange={(e) => handleMinInput(e.target.value)}
                             className="w-full [appearance:textfield] rounded-lg border border-ink/40 bg-surface/60 py-2 pr-8 pl-2.5 text-[13px] font-semibold tabular-nums transition-[border-color,box-shadow] duration-200 placeholder:font-normal placeholder:text-ink/60 hover:border-ink/60 focus:border-ink focus:bg-surface focus:ring-3 focus:ring-ink/20 focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
@@ -1248,18 +1245,18 @@ export default function PhotoEditor({
                           {fit.status === "too-big" ? (
                             <p>
                               <span className="font-semibold">
-                                Too big for {maxKb} KB at {targetWidth} × {targetHeight} px.
+                                {t.tooBig(maxKb, targetWidth, targetHeight)}
                               </span>{" "}
-                              Fewer pixels make a smaller file.
+                              {t.fewerPixels}
                             </p>
                           ) : (
                             <p>
                               <span className="font-semibold">
-                                Under the {minKb} KB minimum at {targetWidth} × {targetHeight} px.
+                                {t.tooSmall(minKb, targetWidth, targetHeight)}
                               </span>{" "}
                               {maxKb
-                                ? "More pixels make a bigger file."
-                                : "Even at full quality. More pixels make a bigger file."}
+                                ? t.morePixels
+                                : t.fullQualityMorePixels}
                             </p>
                           )}
                           <button
@@ -1267,7 +1264,7 @@ export default function PhotoEditor({
                             onClick={fit.status === "too-big" ? shrinkToFit : enlargeToFit}
                             className="rounded-md bg-ink px-3 py-1.5 text-[13px] font-semibold text-booth transition duration-200 hover:bg-ink-soft active:scale-[0.97]"
                           >
-                            {fit.status === "too-big" ? "Shrink to fit" : "Enlarge to fit"}
+                            {fit.status === "too-big" ? t.shrinkToFit : t.enlargeToFit}
                           </button>
                         </div>
                       </div>
@@ -1275,32 +1272,30 @@ export default function PhotoEditor({
                       <p role="status" className="text-xs text-pretty text-ink/75">
                         {fit ? (
                           <>
-                            Quality set to{" "}
+                            {t.qualitySetTo}{" "}
                             <span className="font-bold text-ink tabular-nums">
                               {Math.round(fit.quality * 100)}%
                             </span>{" "}
-                            {minKb
-                              ? `to stay between ${minKb} and ${maxKb} KB.`
-                              : `to stay under ${maxKb} KB.`}
+                            {minKb ? t.toStayBetween(minKb, maxKb) : t.toStayUnder(maxKb)}
                           </>
                         ) : (
-                          <>Quality is set automatically to stay under {maxKb} KB.</>
+                          <>{t.qualityAuto(maxKb)}</>
                         )}
                       </p>
                     ) : fit && minKb && fit.quality > quality ? (
                       <p role="status" className="text-xs text-pretty text-ink/75">
-                        Quality raised to{" "}
+                        {t.qualityRaisedTo}{" "}
                         <span className="font-bold text-ink tabular-nums">
                           {Math.round(fit.quality * 100)}%
                         </span>{" "}
-                        to stay above {minKb} KB.
+                        {t.toStayAbove(minKb)}
                       </p>
                     ) : null}
 
                     {!maxKb && (
                       <label className="flex flex-col gap-2">
                         <span className="flex items-center justify-between gap-3 text-xs font-semibold text-ink/75">
-                          Quality
+                          {t.quality}
                           <span className="text-sm font-bold text-ink tabular-nums">
                             {Math.round(quality * 100)}%
                           </span>
@@ -1319,8 +1314,7 @@ export default function PhotoEditor({
                   </>
                 ) : (
                   <p className="text-xs text-pretty text-ink/75">
-                    Lossless. Switch to JPEG to set a file size limit, or if the form asks for a
-                    smaller file.
+                    {t.lossless}
                   </p>
                 )}
               </div>
@@ -1343,7 +1337,7 @@ export default function PhotoEditor({
                         <img
                           key={previewUrl}
                           src={previewUrl}
-                          alt="Cropped and resized preview"
+                          alt={t.previewAlt}
                           className="block h-32 w-auto max-w-none animate-refresh"
                         />
                       </div>
@@ -1362,7 +1356,7 @@ export default function PhotoEditor({
                     </div>
                   ) : (
                     <p className="pt-12 text-center text-sm text-pretty text-ink/75">
-                      Your print comes out here once the crop is set.
+                      {t.printComesOut}
                     </p>
                   )}
                 </div>
@@ -1377,7 +1371,7 @@ export default function PhotoEditor({
                   className="on-dark group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-ink px-4 py-3.5 text-[15px] font-bold text-booth shadow-key transition duration-200 hover:bg-ink-soft active:scale-[0.99] disabled:pointer-events-none disabled:opacity-45"
                 >
                   <DownloadIcon className="size-4.5 transition duration-200 group-hover:translate-y-px" />
-                  Download {formatLabel}
+                  {t.downloadFormat(formatLabel)}
                   {sizeLabel && (
                     <span className="tabular-nums">
                       · {targetWidth} × {targetHeight} px · {sizeLabel}
@@ -1393,7 +1387,7 @@ export default function PhotoEditor({
                       className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-ink/40 bg-surface/60 px-4 py-2.5 text-sm font-semibold transition duration-200 hover:bg-surface active:scale-[0.99] disabled:pointer-events-none disabled:opacity-45"
                     >
                       <ShareIcon className="size-4" />
-                      Share
+                      {t.share}
                     </button>
                   )}
                   <button
@@ -1403,14 +1397,13 @@ export default function PhotoEditor({
                       canShareFiles ? "" : "mx-auto"
                     }`}
                   >
-                    Start over
+                    {t.startOver}
                   </button>
                 </div>
               </div>
               {canShareFiles && (
                 <p className="text-xs leading-relaxed text-pretty text-ink/75">
-                  Apps like WhatsApp recompress photos sent via Share. For full quality, tap
-                  Download, then attach the file as a Document in the app instead.
+                  {t.whatsappNote}
                 </p>
               )}
             </section>
@@ -1429,7 +1422,7 @@ export default function PhotoEditor({
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-booth px-4 py-3 text-[15px] font-bold text-ink transition duration-200 active:scale-[0.99] disabled:opacity-45"
             >
               <DownloadIcon className="size-4.5" />
-              Download {formatLabel}
+              {t.downloadFormat(formatLabel)}
               {sizeLabel && (
                 <span className="tabular-nums">
                   · {targetWidth} × {targetHeight} px · {sizeLabel}
@@ -1444,7 +1437,7 @@ export default function PhotoEditor({
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Take a photo"
+          aria-label={t.takePhoto}
           onKeyDown={(e) => {
             if (e.key === "Escape") closeCamera();
           }}
@@ -1452,9 +1445,9 @@ export default function PhotoEditor({
         >
           <p className="flex w-full max-w-2xl items-center gap-2 text-sm font-semibold">
             <span aria-hidden="true" className="size-2 animate-live rounded-full bg-curtain" />
-            Camera on
+            {t.cameraOn}
             <span className="ml-auto text-xs font-normal text-stage-muted">
-              {chosenPreset ? presetCaption(chosenPreset) : "Fit your head and shoulders in the frame"}
+              {chosenPreset ? presetCaption(t, chosenPreset) : t.fitHeadShoulders}
             </span>
           </p>
           <div className="relative w-full max-w-2xl">
@@ -1477,13 +1470,13 @@ export default function PhotoEditor({
               onClick={closeCamera}
               className="justify-self-start rounded-lg px-3 py-2 text-sm font-semibold text-stage-muted transition duration-200 hover:bg-stage-raised hover:text-stage-text"
             >
-              Cancel
+              {t.cancel}
             </button>
             <button
               ref={captureButtonRef}
               type="button"
               onClick={capturePhoto}
-              aria-label="Capture photo"
+              aria-label={t.capture}
               className="group size-[4.5rem] justify-self-center rounded-full border-[3px] border-booth p-1.5 transition duration-200 active:scale-95"
             >
               <span className="block size-full rounded-full bg-booth transition duration-200 group-hover:scale-95" />

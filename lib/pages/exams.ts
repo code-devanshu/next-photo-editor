@@ -39,6 +39,14 @@ export const EXAM_PAGES: PageEntry[] = [
       { label: "FormPic size", value: "413 × 531 px", note: "35 × 45 mm at 300 DPI" },
       { label: "Signature", value: "Signed 3 times", note: "one below the other" },
     ],
+    spec: {
+      title: "UPSC upload specification",
+      rows: [
+        { item: "Photograph", pixels: "350 to 1000 px per side", minKb: 20, maxKb: 300, format: "JPG" },
+        { item: "Signature", pixels: "350 to 1000 px per side", minKb: 20, maxKb: 300, format: "JPG", notes: "For the Civil Services exam, signed three times, one below the other" },
+        { item: "Live photo", notes: "Captured with your camera in the Civil Services application form" },
+      ],
+    },
     requirements: {
       title: "UPSC photo requirements",
       items: [
@@ -126,6 +134,14 @@ export const EXAM_PAGES: PageEntry[] = [
       { label: "Background", value: "White", note: "colour or black and white photo" },
       { label: "FormPic size", value: "413 × 531 px", note: "35 × 45 mm at 300 DPI" },
     ],
+    spec: {
+      title: "NEET (UG) 2026 upload specification",
+      rows: [
+        { item: "Photograph", printSize: "Passport size", minKb: 10, maxKb: 200, format: "JPG", background: "White", notes: "Colour or black and white, face 80% with ears visible" },
+        { item: "Signature", minKb: 10, maxKb: 100, format: "JPG" },
+        { item: "Postcard size prints", printSize: "4 × 6 in", format: "Prints to keep", background: "White", notes: "4 to 6 copies, plus 6 to 8 passport size" },
+      ],
+    },
     requirements: {
       title: "NEET photo requirements",
       items: [
@@ -209,6 +225,15 @@ export const EXAM_PAGES: PageEntry[] = [
       { label: "Left thumb", value: "240 × 240 px", note: "20–50 KB" },
       { label: "Declaration", value: "800 × 400 px", note: "50–100 KB, handwritten" },
     ],
+    spec: {
+      title: "IBPS upload sizes",
+      rows: [
+        { item: "Photograph", printSize: "4.5 × 3.5 cm", pixels: "200 × 230 px (preferred)", minKb: 20, maxKb: 50, format: "JPG/JPEG", background: "Light, preferably white" },
+        { item: "Signature", pixels: "140 × 60 px (preferred)", minKb: 10, maxKb: 20, format: "JPG/JPEG", notes: "Black ink, not in capital letters" },
+        { item: "Left thumb impression", printSize: "3 × 3 cm", pixels: "240 × 240 px", dpi: 200, minKb: 20, maxKb: 50, format: "JPG/JPEG" },
+        { item: "Hand-written declaration", printSize: "10 × 5 cm", pixels: "800 × 400 px", dpi: 200, minKb: 50, maxKb: 100, format: "JPG/JPEG" },
+      ],
+    },
     requirements: {
       title: "IBPS photo requirements",
       items: [
@@ -290,6 +315,13 @@ export const EXAM_PAGES: PageEntry[] = [
       { label: "Pixels", value: "472 × 157 px", note: "at 200 DPI" },
       { label: "Photo", value: "Live capture", note: "taken in the form, not uploaded" },
     ],
+    spec: {
+      title: "SSC upload specification",
+      rows: [
+        { item: "Signature", printSize: "about 6.0 × 2.0 cm", minKb: 10, maxKb: 20, format: "JPEG/JPG" },
+        { item: "Live photo", notes: "Captured with your device's camera in the form; capturing an existing photo is rejected" },
+      ],
+    },
     requirements: {
       title: "SSC signature requirements",
       items: [

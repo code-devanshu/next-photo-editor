@@ -13,23 +13,29 @@ export function pageMetadata({
   description,
   path,
   absoluteTitle = false,
+  languages,
+  locale = "en_IN",
 }: {
   title: string;
   description: string;
   path: string;
   absoluteTitle?: boolean;
+  /** hreflang alternates, keyed by language tag, including the page itself. */
+  languages?: Record<string, string>;
+  locale?: string;
 }): Metadata {
   const fullTitle = absoluteTitle ? title : `${title} — ${SITE_NAME}`;
   return {
     title: absoluteTitle ? { absolute: title } : title,
     description,
-    alternates: { canonical: path },
+    alternates: { canonical: path, ...(languages && { languages }) },
     openGraph: {
       type: "website",
       siteName: SITE_NAME,
       url: path,
       title: fullTitle,
       description,
+      locale,
     },
     twitter: {
       card: "summary_large_image",

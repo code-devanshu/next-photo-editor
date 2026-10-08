@@ -3,9 +3,11 @@ import { Archivo } from "next/font/google";
 import { SiteFooter, SiteHeader, SkipLink } from "@/components/site-chrome";
 import { siteSchema } from "@/lib/schema";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, jsonLd } from "@/lib/site";
-import "./globals.css";
+import type { Lang } from "@/lib/ui-text";
+import "@/app/globals.css";
 
 // One variable family: the width axis gives the condensed booth signage, normal width the UI.
+// It has no Devanagari, so Hindi text falls back to the system's Devanagari font.
 const archivo = Archivo({
   variable: "--font-archivo",
   subsets: ["latin"],
@@ -17,7 +19,8 @@ const archivo = Archivo({
 const googleVerification = process.env.GOOGLE_SITE_VERIFICATION;
 const bingVerification = process.env.BING_SITE_VERIFICATION;
 
-export const metadata: Metadata = {
+/** Metadata shared by both root layouts. Pages set their own title, description and alternates. */
+export const rootMetadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
     default: SITE_NAME,
@@ -35,27 +38,21 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = {
+export const rootViewport: Viewport = {
   themeColor: "#141414",
   colorScheme: "light",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+/** The document around every page: `lang` sets the html attribute and the chrome's language. */
+export function RootShell({ lang, children }: { lang: Lang; children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      className={`${archivo.variable} h-full antialiased`}
-    >
+    <html lang={lang} className={`${archivo.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(siteSchema)} />
-        <SkipLink />
-        <SiteHeader />
+        <SkipLink lang={lang} />
+        <SiteHeader lang={lang} />
         {children}
-        <SiteFooter />
+        <SiteFooter lang={lang} />
       </body>
     </html>
   );

@@ -3,6 +3,8 @@ import { PresetOutline } from "@/components/preset-outline";
 import { ArrowIcon, LockIcon, PlusIcon } from "@/lib/icons";
 import {
   FEATURED_PRESETS,
+  getPage,
+  localize,
   pagePath,
   pagePreset,
   type Fact,
@@ -14,6 +16,7 @@ import {
 } from "@/lib/pages";
 import { presetResolution, presetSizeRange, type FormPreset } from "@/lib/presets";
 import { FEEDBACK_URL } from "@/lib/site";
+import { UI_TEXT, type Lang } from "@/lib/ui-text";
 
 // Server-rendered content below the editor. Headings are phrased as the questions
 // people search, with the direct answer first, so search and answer engines can quote them.
@@ -74,24 +77,36 @@ export function SizeAnswer({
   );
 }
 
-export function SizesTable() {
+/** A preset's page in the reader's language, falling back to English when it has no translation. */
+function sizeLink(slug: string, lang: Lang) {
+  const page = getPage(slug);
+  return page ? pagePath(page, page.hi ? lang : "en") : `/${slug}`;
+}
+
+function sizeName(preset: FormPreset, lang: Lang) {
+  const page = getPage(preset.slug);
+  return lang === "hi" && page?.hi ? page.hi.name : preset.name;
+}
+
+export function SizesTable({ lang = "en" }: { lang?: Lang }) {
+  const t = UI_TEXT[lang];
   return (
-    <Section id="sizes" title="Photo sizes for common forms">
+    <Section id="sizes" title={t.sizesTitle}>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-[15px]">
           <thead className="text-sm text-muted">
             <tr className="border-b border-rule-strong">
               <th scope="col" className="py-2.5 pr-4 font-normal">
-                Document
+                {t.sizesHead.document}
               </th>
               <th scope="col" className="py-2.5 pr-4 font-normal">
-                Print size
+                {t.sizesHead.print}
               </th>
               <th scope="col" className="py-2.5 pr-4 font-normal">
-                Pixels
+                {t.sizesHead.pixels}
               </th>
               <th scope="col" className="hidden py-2.5 font-normal sm:table-cell">
-                Resolution
+                {t.sizesHead.resolution}
               </th>
             </tr>
           </thead>
@@ -100,13 +115,13 @@ export function SizesTable() {
               <tr key={preset.slug} className="border-b border-rule">
                 <th scope="row" className="py-4 pr-4 font-semibold">
                   <Link
-                    href={`/${preset.slug}`}
+                    href={sizeLink(preset.slug, lang)}
                     className="group flex items-end gap-3.5 underline decoration-rule-strong underline-offset-4 transition-colors duration-200 hover:decoration-ink"
                   >
                     <span className="hidden h-14 w-14 shrink-0 items-end justify-center sm:flex">
                       <PresetOutline preset={preset} scale={1.05} />
                     </span>
-                    <span className="pb-0.5">{preset.name}</span>
+                    <span className="pb-0.5">{sizeName(preset, lang)}</span>
                   </Link>
                 </th>
                 <td className="py-4 pr-4 align-bottom tabular-nums">{preset.spec}</td>
@@ -114,32 +129,28 @@ export function SizesTable() {
                   {preset.width} × {preset.height} px
                 </td>
                 <td className="hidden py-4 align-bottom text-muted tabular-nums sm:table-cell">
-                  {presetResolution(preset)}
+                  {preset.dpi ? presetResolution(preset) : t.setInPixels}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p className="mt-4 text-sm text-pretty text-muted">
-        Outlines are drawn to scale. Need a different size? Type any width and height in pixels, and lock the aspect ratio
-        to keep the shape.
-      </p>
+      <p className="mt-4 text-sm text-pretty text-muted">{t.sizesNote}</p>
     </Section>
   );
 }
 
-const REQUIREMENTS_NOTE =
-  "FormPic crops and resizes but doesn't change the background, so start with a photo taken against a plain light wall. Rules change from time to time, so check the official instructions for your application before you submit.";
-
 export function Requirements({
   title,
   items,
-  note = REQUIREMENTS_NOTE,
+  note,
+  lang = "en",
 }: {
   title: string;
   items: string[];
   note?: string;
+  lang?: Lang;
 }) {
   return (
     <Section id="requirements" title={title}>
@@ -154,7 +165,9 @@ export function Requirements({
           </li>
         ))}
       </ul>
-      <p className="mt-6 max-w-[62ch] text-sm leading-relaxed text-pretty text-muted">{note}</p>
+      <p className="mt-6 max-w-[62ch] text-sm leading-relaxed text-pretty text-muted">
+        {note ?? UI_TEXT[lang].requirementsNote}
+      </p>
     </Section>
   );
 }
@@ -249,7 +262,8 @@ export function HowToSteps({
   );
 }
 
-export function PrivacyNote() {
+export function PrivacyNote({ lang = "en" }: { lang?: Lang }) {
+  const t = UI_TEXT[lang];
   return (
     <section
       aria-labelledby="privacy"
@@ -257,25 +271,19 @@ export function PrivacyNote() {
     >
       <h2 id="privacy" className="signage flex flex-col gap-4 text-[2rem] text-balance sm:text-[2.5rem]">
         <LockIcon className="size-8 text-booth" />
-        Your photo never leaves your device
+        {t.privacyTitle}
       </h2>
       <div className="flex max-w-[62ch] flex-col gap-4 text-lg leading-relaxed text-pretty">
-        <p>
-          FormPic runs entirely in your browser. Your photo is read, cropped and resized with the
-          browser&apos;s canvas, and the result is saved straight to your device. There&apos;s no
-          upload, no account, and no copy kept anywhere.
-        </p>
-        <p className="text-stage-muted">
-          Once the page has loaded, the editor keeps working even if you go offline.
-        </p>
+        <p>{t.privacyBody}</p>
+        <p className="text-stage-muted">{t.privacyOffline}</p>
       </div>
     </section>
   );
 }
 
-export function FaqList({ faqs }: { faqs: Faq[] }) {
+export function FaqList({ faqs, lang = "en" }: { faqs: Faq[]; lang?: Lang }) {
   return (
-    <Section id="faq" title="Frequently asked questions">
+    <Section id="faq" title={UI_TEXT[lang].faq}>
       <div className="flex flex-col">
         {faqs.map(({ question, answer }) => (
           <div
@@ -302,13 +310,16 @@ export function SpecTable({
   rows,
   sources,
   verified,
+  lang = "en",
 }: {
   title: string;
   rows: SpecRow[];
   sources: Source[];
   verified?: string;
+  lang?: Lang;
 }) {
   const [source] = sources;
+  const head = UI_TEXT[lang].specHead;
   return (
     <Section id="spec" title={title}>
       <div className="overflow-x-auto">
@@ -316,16 +327,16 @@ export function SpecTable({
           <thead className="text-sm text-muted">
             <tr className="border-b border-rule-strong">
               <th scope="col" className="py-2.5 pr-4 font-normal">
-                Upload
+                {head.upload}
               </th>
               <th scope="col" className="py-2.5 pr-4 font-normal">
-                Size
+                {head.size}
               </th>
               <th scope="col" className="py-2.5 pr-4 font-normal">
-                File size
+                {head.fileSize}
               </th>
               <th scope="col" className="py-2.5 font-normal">
-                Format
+                {head.format}
               </th>
             </tr>
           </thead>
@@ -355,18 +366,32 @@ export function SpecTable({
       </div>
       {verified && source && (
         <p className="mt-4 text-sm text-pretty text-muted">
-          Last verified <time dateTime={verified}>{formatDate(verified)}</time> per{" "}
-          <a
-            href={source.url}
-            rel="noopener"
-            className="text-ink underline decoration-rule-strong underline-offset-4 transition-colors duration-200 hover:decoration-ink"
-          >
-            {source.title}
-          </a>{" "}
-          ({source.publisher}).
+          {lang === "hi" ? (
+            <>
+              <SourceLink source={source} /> ({source.publisher}) के अनुसार,{" "}
+              <time dateTime={verified}>{formatDate(verified, lang)}</time> को आख़िरी बार जाँचा गया।
+            </>
+          ) : (
+            <>
+              Last verified <time dateTime={verified}>{formatDate(verified)}</time> per{" "}
+              <SourceLink source={source} /> ({source.publisher}).
+            </>
+          )}
         </p>
       )}
     </Section>
+  );
+}
+
+function SourceLink({ source }: { source: Source }) {
+  return (
+    <a
+      href={source.url}
+      rel="noopener"
+      className="text-ink underline decoration-rule-strong underline-offset-4 transition-colors duration-200 hover:decoration-ink"
+    >
+      {source.title}
+    </a>
   );
 }
 
@@ -391,8 +416,8 @@ export function Rejections({ title, items }: { title: string; items: string[] })
 }
 
 /** "2026-10-07" → "7 October 2026", read as UTC so the date doesn't shift by time zone. */
-function formatDate(isoDate: string) {
-  return new Date(`${isoDate}T00:00:00Z`).toLocaleDateString("en-GB", {
+function formatDate(isoDate: string, lang: Lang = "en") {
+  return new Date(`${isoDate}T00:00:00Z`).toLocaleDateString(UI_TEXT[lang].dateLocale, {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -400,9 +425,18 @@ function formatDate(isoDate: string) {
   });
 }
 
-export function Sources({ sources, updated }: { sources: Source[]; updated: string }) {
+export function Sources({
+  sources,
+  updated,
+  lang = "en",
+}: {
+  sources: Source[];
+  updated: string;
+  lang?: Lang;
+}) {
+  const [before, , after] = UI_TEXT[lang].checked("");
   return (
-    <Section id="sources" title="Where these numbers come from">
+    <Section id="sources" title={UI_TEXT[lang].sources}>
       <ul className="flex flex-col gap-3">
         {sources.map(({ publisher, title, url }) => (
           <li key={url} className="flex flex-col gap-0.5">
@@ -418,39 +452,32 @@ export function Sources({ sources, updated }: { sources: Source[]; updated: stri
         ))}
       </ul>
       <p className="mt-6 text-sm text-muted">
-        Last checked against these sources on <time dateTime={updated}>{formatDate(updated)}</time>.
+        {before}
+        <time dateTime={updated}>{formatDate(updated, lang)}</time>
+        {after}
       </p>
     </Section>
   );
 }
 
-export function Feedback() {
+export function Feedback({ lang = "en" }: { lang?: Lang }) {
+  const t = UI_TEXT[lang];
   return (
-    <Section id="feedback" title="Need a size that isn't here?">
+    <Section id="feedback" title={t.feedbackTitle}>
       <div className="flex items-end gap-8">
         <div className="flex max-w-[62ch] flex-col gap-4">
-          <p className="text-lg leading-relaxed text-pretty">
-            FormPic is made by one developer, Devanshu Verma. If your form asks for a photo size
-            FormPic doesn&apos;t have yet, something didn&apos;t work, or you have an idea for a feature,
-            send a message through the contact form on his portfolio. Size requests decide which
-            presets come next.
-          </p>
-          <p className="text-[15px] leading-relaxed text-pretty text-muted">
-            For a new size, it helps to mention the form or country, the size it asks for (in mm or
-            pixels), and any file size limit.
-          </p>
+          <p className="text-lg leading-relaxed text-pretty">{t.feedbackBody}</p>
+          <p className="text-[15px] leading-relaxed text-pretty text-muted">{t.feedbackHint}</p>
           <div className="mt-2 flex flex-col items-start gap-3">
             <a
               href={FEEDBACK_URL}
               rel="noopener"
               className="group inline-flex items-center gap-2 rounded-xl bg-ink px-5 py-3 text-[15px] font-bold text-booth shadow-key transition duration-200 hover:bg-ink-soft active:scale-[0.98]"
             >
-              Send a suggestion
+              {t.feedbackButton}
               <ArrowIcon className="size-4.5 transition duration-200 group-hover:translate-x-0.5" />
             </a>
-            <span className="text-sm text-muted">
-              Opens devanshuverma.in. Nothing from the editor is sent with your message.
-            </span>
+            <span className="text-sm text-muted">{t.feedbackNote}</span>
           </div>
         </div>
         <span
@@ -471,9 +498,12 @@ type RelatedLink = { href: string; name: string; detail: string } & (
   | object
 );
 
-function relatedLink(page: PageEntry): RelatedLink {
+function relatedLink(page: PageEntry, lang: Lang): RelatedLink {
+  const t = UI_TEXT[lang];
   const preset = pagePreset(page);
-  const link = { href: pagePath(page), name: page.name };
+  // Link the page in the reader's language when it has that version, otherwise in English.
+  const linkLang = page.hi ? lang : "en";
+  const link = { href: pagePath(page, linkLang), name: localize(page, linkLang).name };
   if (preset) {
     const range = presetSizeRange(preset);
     return {
@@ -483,32 +513,35 @@ function relatedLink(page: PageEntry): RelatedLink {
     };
   }
   const { minKb, maxKb } = page.limit ?? {};
-  if (minKb && maxKb) return { ...link, detail: `JPEG between ${minKb} and ${maxKb} KB`, kb: maxKb };
-  if (maxKb) return { ...link, detail: `JPEG under ${maxKb} KB, any size`, kb: maxKb };
-  if (minKb) return { ...link, detail: `JPEG of at least ${minKb} KB`, kb: minKb };
-  return { ...link, detail: page.metaDescription.split(". ")[0] };
+  if (minKb && maxKb) return { ...link, detail: t.between(minKb, maxKb), kb: maxKb };
+  if (maxKb) return { ...link, detail: t.under(maxKb), kb: maxKb };
+  if (minKb) return { ...link, detail: t.atLeast(minKb), kb: minKb };
+  return { ...link, detail: localize(page, linkLang).metaDescription.split(/[.।] /)[0] };
 }
 
 /** Linked cards for other pages: the related block on every page, and the full list on hub pages. */
 export function RelatedPages({
   pages,
-  title = "Related sizes and forms",
+  title,
   id = "related",
   custom = true,
+  lang = "en",
 }: {
   pages: PageEntry[];
   title?: string;
   id?: string;
   /** End with a link to the home page's custom size editor. */
   custom?: boolean;
+  lang?: Lang;
 }) {
+  const t = UI_TEXT[lang];
   const links: RelatedLink[] = [
-    ...pages.map(relatedLink),
-    ...(custom ? [{ href: "/", name: "Custom size", detail: "Any width × height in pixels" }] : []),
+    ...pages.map((page) => relatedLink(page, lang)),
+    ...(custom ? [{ href: lang === "hi" ? "/hi" : "/", name: t.customSize, detail: t.customDetail }] : []),
   ];
 
   return (
-    <Section id={id} title={title}>
+    <Section id={id} title={title ?? t.related}>
       <ul className="grid gap-3 sm:grid-cols-2">
         {links.map(({ href, name, detail, ...visual }) => (
           <li key={href}>
@@ -545,10 +578,16 @@ export function RelatedPages({
 }
 
 /** The visible trail above the editor. The same trail goes into the page's BreadcrumbList data. */
-export function Breadcrumbs({ crumbs }: { crumbs: { name: string; path: string }[] }) {
+export function Breadcrumbs({
+  crumbs,
+  lang = "en",
+}: {
+  crumbs: { name: string; path: string }[];
+  lang?: Lang;
+}) {
   if (crumbs.length < 2) return null;
   return (
-    <nav aria-label="Breadcrumb" className="pt-4 text-sm text-muted sm:pt-5">
+    <nav aria-label={UI_TEXT[lang].breadcrumb} className="pt-4 text-sm text-muted sm:pt-5">
       <ol className="flex flex-wrap items-center gap-x-2 gap-y-1">
         {crumbs.map((crumb, index) => {
           const last = index === crumbs.length - 1;
@@ -578,26 +617,50 @@ export function Breadcrumbs({ crumbs }: { crumbs: { name: string; path: string }
 }
 
 /** The home page's way into the hubs: one card per hub with how many pages it lists. */
-export function HubLinks({ hubs }: { hubs: { page: PageEntry; count: number }[] }) {
+export function HubLinks({
+  hubs,
+  lang = "en",
+}: {
+  hubs: { page: PageEntry; count: number }[];
+  lang?: Lang;
+}) {
+  const t = UI_TEXT[lang];
   return (
-    <Section id="find-your-form" title="Find your form">
+    <Section id="find-your-form" title={t.findYourForm}>
       <ul className="grid gap-3 sm:grid-cols-2">
         {hubs.map(({ page, count }) => (
           <li key={page.slug}>
             <Link
-              href={pagePath(page)}
+              href={pagePath(page, page.hi ? lang : "en")}
               className="group flex h-full flex-col gap-2 rounded-2xl border border-rule bg-surface p-5 transition duration-200 hover:border-ink"
             >
               <span className="flex items-center justify-between gap-3">
-                <span className="text-lg font-bold">{page.name}</span>
+                <span className="text-lg font-bold">{localize(page, lang).name}</span>
                 <ArrowIcon className="size-5 shrink-0 text-muted transition duration-200 group-hover:translate-x-0.5 group-hover:text-ink" />
               </span>
-              <span className="text-[15px] text-pretty text-muted">{page.metaDescription.split(". ")[0]}.</span>
-              <span className="mt-auto text-sm font-semibold tabular-nums">{count} pages</span>
+              <span className="text-[15px] text-pretty text-muted">
+                {localize(page, lang).metaDescription.split(/(?<=[.।]) /)[0]}
+              </span>
+              <span className="mt-auto text-sm font-semibold tabular-nums">{t.pageCount(count)}</span>
             </Link>
           </li>
         ))}
       </ul>
     </Section>
+  );
+}
+
+/** A link to the same page in the other language, shown only when that version exists. */
+export function LanguageSwitch({ href, lang = "en" }: { href: string; lang?: Lang }) {
+  const t = UI_TEXT[lang];
+  return (
+    <Link
+      href={href}
+      hrefLang={t.switchLanguageLang}
+      lang={t.switchLanguageLang}
+      className="ml-auto shrink-0 rounded-md px-2 py-1 text-sm font-semibold text-ink underline decoration-rule-strong underline-offset-4 transition-colors duration-200 hover:decoration-ink"
+    >
+      {t.switchLanguage}
+    </Link>
   );
 }
