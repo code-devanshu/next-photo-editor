@@ -1,7 +1,14 @@
+import { BANKING_PAGES } from "@/lib/pages/banking";
 import { DOCUMENT_PAGES } from "@/lib/pages/documents";
+import { ENTRANCE_PAGES } from "@/lib/pages/entrance";
 import { EXAM_PAGES } from "@/lib/pages/exams";
 import { HOME_PAGE } from "@/lib/pages/home";
 import { LIMIT_PAGES } from "@/lib/pages/limits";
+import { RAILWAY_PAGES } from "@/lib/pages/railways";
+import { SIZE_PAGES } from "@/lib/pages/sizes";
+import { SSC_PAGES } from "@/lib/pages/ssc";
+import { THUMB_PAGE } from "@/lib/pages/thumb";
+import { VISA_PAGES } from "@/lib/pages/visas";
 import type { Category, PageEntry } from "@/lib/pages/types";
 import type { FormPreset } from "@/lib/presets";
 
@@ -11,7 +18,19 @@ export type { Category, Faq, Fact, PageEntry, Source, SpecRow, Step } from "@/li
  * Every page on the site, drafts included. Routes, the sitemap, structured data and
  * internal links are all built from this list, so adding a page means adding one entry.
  */
-export const ALL_PAGES: PageEntry[] = [HOME_PAGE, ...DOCUMENT_PAGES, ...EXAM_PAGES, ...LIMIT_PAGES];
+export const ALL_PAGES: PageEntry[] = [
+  HOME_PAGE,
+  ...DOCUMENT_PAGES,
+  ...VISA_PAGES,
+  ...EXAM_PAGES,
+  ...SSC_PAGES,
+  ...BANKING_PAGES,
+  ...RAILWAY_PAGES,
+  ...ENTRANCE_PAGES,
+  THUMB_PAGE,
+  ...SIZE_PAGES,
+  ...LIMIT_PAGES,
+];
 
 /** Pages with a route. Drafts stay out of routes, the sitemap and every link list. */
 export const PAGES = ALL_PAGES.filter((page) => !page.draft);

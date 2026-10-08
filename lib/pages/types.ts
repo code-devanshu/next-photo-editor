@@ -47,10 +47,12 @@ export type PageContent = {
   answer?: string;
   facts?: Fact[];
   requirements?: { title: string; items: string[]; note?: string };
+  /** The official figures, one row per upload, copied from the sources. */
+  spec?: { title: string; rows: SpecRow[] };
   /** Numbered how-to steps. Without items, the steps are generated from the preset or limit. */
   steps?: { title: string; items?: Step[] };
   /** Reasons this form rejects uploads, most common first. */
-  rejections?: string[];
+  rejections?: { title: string; items: string[] };
   faqs: Faq[];
 };
 
@@ -64,10 +66,9 @@ export type PageEntry = PageContent & {
   /** The size the editor starts with. */
   preset?: PresetFields;
   /** File size limits the editor starts with, for pages without a fixed pixel size. */
-  limit?: { minKb?: number; maxKb?: number };
+  limit?: { minKb?: number; maxKb?: number; kind?: FormPreset["kind"] };
   /** Categories a hub page lists. */
   hub?: Exclude<Category, "home" | "hub">[];
-  spec?: SpecRow[];
   /** Official pages the figures were checked against. */
   sources: Source[];
   /** When the figures were last checked against the sources, as YYYY-MM-DD. */

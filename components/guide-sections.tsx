@@ -9,6 +9,7 @@ import {
   type Faq,
   type PageEntry,
   type Source,
+  type SpecRow,
   type Step,
 } from "@/lib/pages";
 import { presetResolution, presetSizeRange, type FormPreset } from "@/lib/presets";
@@ -160,7 +161,7 @@ export function Requirements({
 
 /** The editor's own four steps, filled in with the page's preset or limit. */
 function defaultSteps(preset?: FormPreset, maxKb?: number): Step[] {
-  const signature = preset?.kind === "signature";
+  const signature = preset?.kind === "signature" || preset?.kind === "thumb";
   const sizeRange = preset && presetSizeRange(preset);
   return [
     signature
@@ -286,6 +287,105 @@ export function FaqList({ faqs }: { faqs: Faq[] }) {
           </div>
         ))}
       </div>
+    </Section>
+  );
+}
+
+/** "10–20 KB", "under 80 KB", "50 KB or more", or a dash when the source sets no limit. */
+function kbRange(row: SpecRow) {
+  return presetSizeRange(row) ?? "—";
+}
+
+/** The official figures as a table, with the date they were last checked against the first source. */
+export function SpecTable({
+  title,
+  rows,
+  sources,
+  verified,
+}: {
+  title: string;
+  rows: SpecRow[];
+  sources: Source[];
+  verified?: string;
+}) {
+  const [source] = sources;
+  return (
+    <Section id="spec" title={title}>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[34rem] text-left text-[15px]">
+          <thead className="text-sm text-muted">
+            <tr className="border-b border-rule-strong">
+              <th scope="col" className="py-2.5 pr-4 font-normal">
+                Upload
+              </th>
+              <th scope="col" className="py-2.5 pr-4 font-normal">
+                Size
+              </th>
+              <th scope="col" className="py-2.5 pr-4 font-normal">
+                File size
+              </th>
+              <th scope="col" className="py-2.5 font-normal">
+                Format
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.item} className="border-b border-rule align-top">
+                <th scope="row" className="py-4 pr-4 font-semibold">
+                  {row.item}
+                  {(row.background || row.notes) && (
+                    <span className="mt-1 block max-w-[28ch] text-sm font-normal text-pretty text-muted">
+                      {[row.background, row.notes].filter(Boolean).join(". ")}
+                    </span>
+                  )}
+                </th>
+                <td className="py-4 pr-4 tabular-nums">
+                  {row.printSize && <span className="block">{row.printSize}</span>}
+                  {row.pixels && <span className="block font-semibold">{row.pixels}</span>}
+                  {row.dpi && <span className="block text-sm text-muted">{row.dpi} DPI</span>}
+                  {!row.printSize && !row.pixels && "—"}
+                </td>
+                <td className="py-4 pr-4 font-semibold tabular-nums">{kbRange(row)}</td>
+                <td className="py-4">{row.format ?? "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {verified && source && (
+        <p className="mt-4 text-sm text-pretty text-muted">
+          Last verified <time dateTime={verified}>{formatDate(verified)}</time> per{" "}
+          <a
+            href={source.url}
+            rel="noopener"
+            className="text-ink underline decoration-rule-strong underline-offset-4 transition-colors duration-200 hover:decoration-ink"
+          >
+            {source.title}
+          </a>{" "}
+          ({source.publisher}).
+        </p>
+      )}
+    </Section>
+  );
+}
+
+export function Rejections({ title, items }: { title: string; items: string[] }) {
+  return (
+    <Section id="rejections" title={title}>
+      <ol className="flex flex-col">
+        {items.map((item, index) => (
+          <li
+            key={item}
+            className="flex gap-3.5 border-b border-rule py-3 text-[17px] text-pretty first:pt-0"
+          >
+            <span aria-hidden="true" className="figures w-6 shrink-0 text-lg text-muted tabular-nums">
+              {index + 1}
+            </span>
+            {item}
+          </li>
+        ))}
+      </ol>
     </Section>
   );
 }

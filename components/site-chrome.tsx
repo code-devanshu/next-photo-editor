@@ -34,7 +34,10 @@ const ID_PRESETS = FEATURED_PRESETS.filter((preset) => {
   return category === "id" || category === "visa";
 });
 const EXAM_PRESETS = FEATURED_PRESETS.filter((preset) => !ID_PRESETS.includes(preset));
-const LIMIT_PAGES = pagesIn("kb");
+// Single limits first, smallest to largest, then the ranges and the minimum page.
+const LIMIT_PAGES = pagesIn("kb").toSorted(
+  (a, b) => Number(!!a.limit?.minKb) - Number(!!b.limit?.minKb) || (a.limit?.maxKb ?? 0) - (b.limit?.maxKb ?? 0)
+);
 
 function FooterPresetList({
   presets,

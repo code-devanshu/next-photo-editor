@@ -154,12 +154,12 @@ const FRAME_MAX_WIDTH = 260;
 function FrameGuide({
   aspect,
   caption,
-  signature = false,
+  kind,
   maxHeight = 150,
 }: {
   aspect: number;
   caption: string;
-  signature?: boolean;
+  kind?: FormPreset["kind"];
   maxHeight?: number;
 }) {
   const height = Math.min(maxHeight, Math.round(FRAME_MAX_WIDTH / aspect));
@@ -169,7 +169,18 @@ function FrameGuide({
         className="relative block overflow-hidden rounded-[3px] border-2 border-dashed border-booth/75 transition-[width,height] duration-500 ease-mech"
         style={{ width: Math.round(height * aspect), height }}
       >
-        {signature ? (
+        {kind === "thumb" ? (
+          <svg
+            viewBox="0 0 40 40"
+            aria-hidden="true"
+            focusable="false"
+            className="absolute inset-0 size-full text-stage-line"
+          >
+            {[14, 10, 6].map((r) => (
+              <ellipse key={r} cx="20" cy="20" rx={r * 0.8} ry={r} fill="none" stroke="currentColor" strokeWidth="2.5" />
+            ))}
+          </svg>
+        ) : kind === "signature" ? (
           <svg
             viewBox="0 0 120 40"
             aria-hidden="true"
@@ -250,6 +261,8 @@ export default function PhotoEditor({
   preset: initialPreset,
   presets: featuredPresets,
   maxKb: initialMaxKb,
+  minKb: initialMinKb,
+  kind: initialKind,
 }: {
   title: string;
   titleAccent: string;
@@ -260,6 +273,10 @@ export default function PhotoEditor({
   presets: FormPreset[];
   /** File size limit the editor starts with, for the per-limit guide pages. */
   maxKb?: number;
+  /** Smallest file the page's form accepts, for pages without a preset. */
+  minKb?: number;
+  /** What the page's upload is, for the framing guide on pages without a preset. */
+  kind?: FormPreset["kind"];
 }) {
   const pickerPresets =
     initialPreset && !featuredPresets.some((preset) => preset.slug === initialPreset.slug)
@@ -297,7 +314,7 @@ export default function PhotoEditor({
 
   // Upload portals almost always require JPEG, so presets default to it.
   const [format, setFormat] = useState<ExportFormat>(
-    initialPreset || initialMaxKb ? "jpeg" : "png"
+    initialPreset || initialMaxKb || initialMinKb ? "jpeg" : "png"
   );
   const [quality, setQuality] = useState(0.9);
   // File size limit in KB. While one is set, the JPEG quality is chosen to fit it.
@@ -308,12 +325,16 @@ export default function PhotoEditor({
   const limitBytes = format === "jpeg" && maxKb ? maxKb * BYTES_PER_KB : null;
   // The preset's minimum holds while the output keeps the preset's shape. A new shape is a
   // different upload, like a signature cropped on the photo page, with limits of its own.
-  const minKb =
+  const presetMinKb =
     chosenPreset?.minKb &&
     targetHeight > 0 &&
     Math.abs(targetWidth / targetHeight - chosenPreset.width / chosenPreset.height) < SHAPE_TOLERANCE
       ? chosenPreset.minKb
       : null;
+  // A minimum typed into the Min field replaces the preset's or the page's; undefined means none typed.
+  const [minOverride, setMinOverride] = useState<number | null | undefined>(undefined);
+  const minKb =
+    minOverride !== undefined ? minOverride : chosenPreset ? presetMinKb : (initialMinKb ?? null);
   const minBytes = format === "jpeg" && minKb ? minKb * MIN_BYTES_PER_KB : null;
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -513,6 +534,7 @@ export default function PhotoEditor({
 
   function choosePreset(preset: FormPreset | undefined) {
     setChosenPreset(preset);
+    setMinOverride(undefined);
     if (preset) {
       setFormat("jpeg");
       applyLimit(preset.maxKb ?? null);
@@ -521,6 +543,7 @@ export default function PhotoEditor({
 
   function handleFormPresetClick(preset: FormPreset) {
     setChosenPreset(preset);
+    setMinOverride(undefined);
     handleAspectClick(preset.aspect);
     setTargetWidth(preset.width);
     setTargetHeight(preset.height);
@@ -614,6 +637,11 @@ export default function PhotoEditor({
   function applyLimit(kb: number | null) {
     setMaxKb(kb);
     setCustomKb(customLimitText(kb));
+  }
+
+  function handleMinInput(raw: string) {
+    const value = Math.round(Number(raw));
+    setMinOverride(value > 0 ? value : null);
   }
 
   function handleLimitInput(raw: string) {
@@ -791,7 +819,7 @@ export default function PhotoEditor({
                   <FrameGuide
                     aspect={chosenPreset?.aspect ?? 4 / 5}
                     caption={presetCaption(chosenPreset, maxKb)}
-                    signature={chosenPreset?.kind === "signature"}
+                    kind={chosenPreset?.kind ?? initialKind}
                   />
                   <span className="flex flex-col gap-1.5">
                     <span className="signage text-[2rem]">
@@ -1125,6 +1153,26 @@ export default function PhotoEditor({
                           </span>
                         </label>
                       </div>
+                      <label className="flex items-center justify-between gap-3">
+                        <span className="text-xs font-semibold text-ink/75">Min file size</span>
+                        <span className="relative w-28">
+                          <input
+                            type="number"
+                            min={1}
+                            inputMode="numeric"
+                            placeholder="None"
+                            value={minKb ?? ""}
+                            onChange={(e) => handleMinInput(e.target.value)}
+                            className="w-full [appearance:textfield] rounded-lg border border-ink/40 bg-surface/60 py-2 pr-8 pl-2.5 text-[13px] font-semibold tabular-nums transition-[border-color,box-shadow] duration-200 placeholder:font-normal placeholder:text-ink/60 hover:border-ink/60 focus:border-ink focus:bg-surface focus:ring-3 focus:ring-ink/20 focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                          />
+                          <span
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-xs text-ink/60"
+                          >
+                            KB
+                          </span>
+                        </span>
+                      </label>
                     </div>
 
                     {fit && fit.status !== "fits" ? (
@@ -1148,7 +1196,7 @@ export default function PhotoEditor({
                               </span>{" "}
                               {maxKb
                                 ? "More pixels make a bigger file."
-                                : "Raise the quality, or add pixels for a bigger file."}
+                                : "Even at full quality. More pixels make a bigger file."}
                             </p>
                           )}
                           <button
@@ -1175,6 +1223,14 @@ export default function PhotoEditor({
                         ) : (
                           <>Quality is set automatically to stay under {maxKb} KB.</>
                         )}
+                      </p>
+                    ) : fit && minKb && fit.quality > quality ? (
+                      <p role="status" className="text-xs text-pretty text-ink/75">
+                        Quality raised to{" "}
+                        <span className="font-bold text-ink tabular-nums">
+                          {Math.round(fit.quality * 100)}%
+                        </span>{" "}
+                        to stay above {minKb} KB.
                       </p>
                     ) : null}
 

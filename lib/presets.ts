@@ -4,8 +4,8 @@ export type FormPreset = {
   /** URL of the preset's guide page, e.g. `/pan-card-photo`. */
   slug: string;
   name: string;
-  /** Signatures get a pen-stroke outline and aren't called "photo". */
-  kind?: "signature";
+  /** Signatures and thumb impressions get their own outline and aren't called "photo". */
+  kind?: "signature" | "thumb";
   spec: string;
   /** Physical print size in millimetres, used to draw presets at true relative scale. */
   printMm: { width: number; height: number };
@@ -23,7 +23,7 @@ export type FormPreset = {
 
 /** How the preset is named in links and headings: "PAN card photo", "SSC signature". */
 export function presetTitle(preset: FormPreset) {
-  return preset.kind === "signature" ? preset.name : `${preset.name} photo`;
+  return preset.kind ? preset.name : `${preset.name} photo`;
 }
 
 /** The DPI the pixel size comes from, or a note that the form gives pixels directly. */

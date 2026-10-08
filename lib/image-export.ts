@@ -89,7 +89,13 @@ export async function encodeCanvas(
 ): Promise<EncodedImage | null> {
   if (format === "png" || !range.max) {
     const blob = await canvasToBlob(canvas, format, quality);
-    return blob && { blob, quality, status: statusOf(blob.size, range) };
+    if (!blob) return null;
+    // With only a minimum, raise the quality as far as it goes before reporting the file as too small.
+    if (format === "jpeg" && range.min && blob.size < range.min && quality < 1) {
+      const full = await canvasToBlob(canvas, "jpeg", 1);
+      if (full && full.size > blob.size) return { blob: full, quality: 1, status: statusOf(full.size, range) };
+    }
+    return { blob, quality, status: statusOf(blob.size, range) };
   }
 
   let ceiling = TOP_QUALITY;

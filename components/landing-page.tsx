@@ -4,10 +4,12 @@ import {
   Feedback,
   GuideContent,
   HowToSteps,
+  Rejections,
   RelatedPages,
   Requirements,
   SizeAnswer,
   Sources,
+  SpecTable,
 } from "@/components/guide-sections";
 import { FEATURED_PRESETS, pagePath, pagePreset, relatedPages, type PageEntry } from "@/lib/pages";
 import { pageSchema } from "@/lib/schema";
@@ -42,10 +44,20 @@ export function LandingPage({ page }: { page: PageEntry }) {
         preset={preset}
         presets={FEATURED_PRESETS}
         maxKb={page.limit?.maxKb}
+        minKb={page.limit?.minKb}
+        kind={page.limit?.kind}
       />
       <GuideContent>
         {page.question && page.answer && (
           <SizeAnswer question={page.question} answer={page.answer} facts={page.facts ?? []} />
+        )}
+        {page.spec && (
+          <SpecTable
+            title={page.spec.title}
+            rows={page.spec.rows}
+            sources={page.sources}
+            verified={page.lastVerified}
+          />
         )}
         {page.requirements && (
           <Requirements
@@ -62,6 +74,7 @@ export function LandingPage({ page }: { page: PageEntry }) {
             maxKb={page.limit?.maxKb}
           />
         )}
+        {page.rejections && <Rejections title={page.rejections.title} items={page.rejections.items} />}
         <FaqList faqs={page.faqs} />
         {page.sources.length > 0 && (
           <Sources sources={page.sources} updated={page.lastVerified ?? page.updated} />

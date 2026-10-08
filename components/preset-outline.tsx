@@ -54,7 +54,14 @@ export function PresetOutline({
         strokeWidth="1.25"
         vectorEffect="non-scaling-stroke"
       />
-      {preset.kind === "signature" ? (
+      {preset.kind === "thumb" ? (
+        // A thumbprint: an upright oval with a few ridge lines inside it.
+        <g fill="none" stroke="currentColor" strokeOpacity="0.7" strokeWidth="1.5" vectorEffect="non-scaling-stroke">
+          {[0.34, 0.24, 0.14].map((r) => (
+            <ellipse key={r} cx={cx} cy={height / 2} rx={width * r * 0.8} ry={height * r} vectorEffect="non-scaling-stroke" />
+          ))}
+        </g>
+      ) : preset.kind === "signature" ? (
         <path
           d={`M ${stroke[0]} C ${stroke[1]}, ${stroke[2]}, ${stroke[3]} S ${stroke[4]}, ${stroke[5]} S ${stroke[6]}, ${stroke[7]} S ${stroke[8]}, ${stroke[9]}`}
           fill="none"
