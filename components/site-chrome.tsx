@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { BrandMark } from "@/lib/brand-mark";
 import { LockIcon } from "@/lib/icons";
-import { LIMIT_GUIDES } from "@/lib/guides";
-import { FORM_PRESETS, presetSizeRange, presetTitle, type FormPreset } from "@/lib/presets";
+import { FEATURED_PRESETS, getPage, pagesIn } from "@/lib/pages";
+import { presetSizeRange, presetTitle, type FormPreset } from "@/lib/presets";
 import { FEEDBACK_URL, SITE_NAME } from "@/lib/site";
 
 export function SkipLink() {
@@ -25,8 +25,16 @@ function Wordmark() {
   );
 }
 
-const ID_PRESETS = FORM_PRESETS.filter((preset) => preset.group === "id");
-const EXAM_PRESETS = FORM_PRESETS.filter((preset) => preset.group === "exam");
+// Passport and ID documents lead the header nav; exam forms are grouped after them.
+function presetCategory(preset: FormPreset) {
+  return getPage(preset.slug)?.category;
+}
+const ID_PRESETS = FEATURED_PRESETS.filter((preset) => {
+  const category = presetCategory(preset);
+  return category === "id" || category === "visa";
+});
+const EXAM_PRESETS = FEATURED_PRESETS.filter((preset) => !ID_PRESETS.includes(preset));
+const LIMIT_PAGES = pagesIn("kb");
 
 function FooterPresetList({
   presets,
@@ -127,13 +135,13 @@ export function SiteFooter() {
             File size
           </h2>
           <ul className="mt-3 flex flex-col gap-2">
-            {LIMIT_GUIDES.map((guide) => (
-              <li key={guide.slug}>
+            {LIMIT_PAGES.map((page) => (
+              <li key={page.slug}>
                 <Link
-                  href={`/${guide.slug}`}
+                  href={`/${page.slug}`}
                   className="text-stage-muted underline-offset-4 transition-colors duration-200 hover:text-stage-text hover:underline"
                 >
-                  Resize image to {guide.kb} KB
+                  {page.name}
                 </Link>
               </li>
             ))}

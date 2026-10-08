@@ -2,8 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { BrandMark } from "@/lib/brand-mark";
-import { GUIDES, LIMIT_GUIDES, getLimitGuide } from "@/lib/guides";
-import { getPreset, presetTitle } from "@/lib/presets";
+import { SUBPAGES, getPage, pagePreset } from "@/lib/pages";
 import { SITE_NAME } from "@/lib/site";
 
 const INK = "#141414";
@@ -103,35 +102,38 @@ export async function renderShareImage({ title, detail }: { title: string; detai
   );
 }
 
-/** Every guide page's slug, for the opengraph-image and twitter-image routes under app/[slug]. */
+/** Every subpage's slug, for the opengraph-image and twitter-image routes under app/[slug]. */
 export function guideImageParams() {
-  return [...GUIDES, ...LIMIT_GUIDES].map(({ slug }) => ({ slug }));
+  return SUBPAGES.map(({ slug }) => ({ slug }));
 }
 
 export function guideImageAlt(slug: string) {
-  const preset = getPreset(slug);
-  if (preset) {
-    return `${presetTitle(preset)} size: ${preset.spec}, ${preset.width} × ${preset.height} px — ${SITE_NAME}`;
+  const page = getPage(slug);
+  const preset = page && pagePreset(page);
+  if (page && preset) {
+    return `${page.name} size: ${preset.spec}, ${preset.width} × ${preset.height} px — ${SITE_NAME}`;
   }
-  const limit = getLimitGuide(slug);
-  if (limit) return `Resize an image to ${limit.kb} KB, in your browser — ${SITE_NAME}`;
-  return `${SITE_NAME} photo size guide`;
+  const kb = page?.limit?.maxKb;
+  if (kb) return `Resize an image to ${kb} KB, in your browser — ${SITE_NAME}`;
+  return page ? `${page.name} — ${SITE_NAME}` : `${SITE_NAME} photo size guide`;
 }
 
 export function renderGuideImage(slug: string) {
-  const preset = getPreset(slug);
-  if (preset) {
+  const page = getPage(slug);
+  const preset = page && pagePreset(page);
+  if (page && preset) {
     return renderShareImage({
-      title: presetTitle(preset),
+      title: page.name,
       detail: `${preset.spec} · ${preset.width} × ${preset.height} px · free, no upload`,
     });
   }
-  const limit = getLimitGuide(slug);
-  if (limit) {
+  const kb = page?.limit?.maxKb;
+  if (page && kb) {
     return renderShareImage({
-      title: `Resize image to ${limit.kb} KB`,
+      title: page.name,
       detail: "Best JPEG quality that fits · free, no upload",
     });
   }
+  if (page) return renderShareImage({ title: page.name, detail: "In your browser, no upload" });
   return renderShareImage({ title: "Photos sized for forms", detail: "In your browser, no upload" });
 }

@@ -8,16 +8,14 @@ import {
   PrivacyNote,
   SizesTable,
 } from "@/components/guide-sections";
-import { HOME_FAQS, HOME_UPDATED } from "@/lib/guides";
+import { FEATURED_PRESETS, HOME_PAGE as page } from "@/lib/pages";
 import { pageSchema } from "@/lib/schema";
-import { SITE_DESCRIPTION, SITE_NAME, jsonLd, pageMetadata } from "@/lib/site";
-
-const HOME_TITLE = "Resize photos for passport, visa & PAN card forms";
+import { SITE_NAME, jsonLd, pageMetadata } from "@/lib/site";
 
 // The root layout's title template only applies to child segments, so the home title is written out in full.
 export const metadata: Metadata = pageMetadata({
-  title: `${HOME_TITLE} — ${SITE_NAME}`,
-  description: SITE_DESCRIPTION,
+  title: `${page.title} — ${SITE_NAME}`,
+  description: page.metaDescription,
   path: "/",
   absoluteTitle: true,
 });
@@ -33,23 +31,24 @@ export default function Home() {
         dangerouslySetInnerHTML={jsonLd(
           pageSchema({
             path: "/",
-            name: HOME_TITLE,
-            description: SITE_DESCRIPTION,
-            dateModified: HOME_UPDATED,
-            faqs: HOME_FAQS,
+            name: page.title,
+            description: page.metaDescription,
+            dateModified: page.updated,
+            faqs: page.faqs,
           })
         )}
       />
       <PhotoEditor
-        title="Crop & resize photos for forms"
-        titleAccent=", in seconds."
-        intro="Get the exact size for passport, visa, PAN card and exam forms. Your photo is processed entirely on your device, never uploaded or stored, and keeps full quality from start to finish."
+        title={page.h1}
+        titleAccent={page.h1Accent}
+        intro={page.intro}
+        presets={FEATURED_PRESETS}
       />
       <GuideContent>
         <SizesTable />
-        <HowToSteps title="How to resize a photo for a form" />
+        <HowToSteps title={page.steps?.title ?? ""} />
         <PrivacyNote />
-        <FaqList faqs={HOME_FAQS} />
+        <FaqList faqs={page.faqs} />
         <Feedback />
       </GuideContent>
     </main>

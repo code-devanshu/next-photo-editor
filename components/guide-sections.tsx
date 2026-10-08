@@ -1,14 +1,17 @@
 import Link from "next/link";
-import { LIMIT_GUIDES, type Fact, type Faq, type Source } from "@/lib/guides";
 import { PresetOutline } from "@/components/preset-outline";
 import { ArrowIcon, LockIcon, PlusIcon } from "@/lib/icons";
 import {
-  FORM_PRESETS,
-  presetResolution,
-  presetSizeRange,
-  presetTitle,
-  type FormPreset,
-} from "@/lib/presets";
+  FEATURED_PRESETS,
+  pagePath,
+  pagePreset,
+  type Fact,
+  type Faq,
+  type PageEntry,
+  type Source,
+  type Step,
+} from "@/lib/pages";
+import { presetResolution, presetSizeRange, type FormPreset } from "@/lib/presets";
 import { FEEDBACK_URL } from "@/lib/site";
 
 // Server-rendered content below the editor. Headings are phrased as the questions
@@ -92,7 +95,7 @@ export function SizesTable() {
             </tr>
           </thead>
           <tbody>
-            {FORM_PRESETS.map((preset) => (
+            {FEATURED_PRESETS.map((preset) => (
               <tr key={preset.slug} className="border-b border-rule">
                 <th scope="row" className="py-4 pr-4 font-semibold">
                   <Link
@@ -155,19 +158,11 @@ export function Requirements({
   );
 }
 
-export function HowToSteps({
-  title,
-  preset,
-  maxKb,
-}: {
-  title: string;
-  preset?: FormPreset;
-  /** The limit a per-limit page starts with. */
-  maxKb?: number;
-}) {
+/** The editor's own four steps, filled in with the page's preset or limit. */
+function defaultSteps(preset?: FormPreset, maxKb?: number): Step[] {
   const signature = preset?.kind === "signature";
   const sizeRange = preset && presetSizeRange(preset);
-  const steps = [
+  return [
     signature
       ? {
           name: "Add your signature",
@@ -209,6 +204,22 @@ export function HowToSteps({
         "Set a Max file size and FormPic picks the JPEG quality that fits. The Download button shows the final size.",
     },
   ];
+}
+
+export function HowToSteps({
+  title,
+  items,
+  preset,
+  maxKb,
+}: {
+  title: string;
+  /** Steps written for the page. Without them, the steps come from the preset or limit. */
+  items?: Step[];
+  preset?: FormPreset;
+  /** The limit a per-limit page starts with. */
+  maxKb?: number;
+}) {
+  const steps = items ?? defaultSteps(preset, maxKb);
 
   return (
     <Section id="how-to" title={title}>
@@ -353,20 +364,33 @@ export function Feedback() {
   );
 }
 
-export function OtherSizes({ currentSlug }: { currentSlug: string }) {
-  const links = [
-    ...FORM_PRESETS.filter((preset) => preset.slug !== currentSlug).map((preset) => ({
-      href: `/${preset.slug}`,
-      name: presetTitle(preset),
+/** A related page's link, with its preset outline or KB badge and a one-line spec. */
+type RelatedLink = { href: string; name: string; detail: string } & (
+  | { preset: FormPreset }
+  | { kb: number }
+  | object
+);
+
+function relatedLink(page: PageEntry): RelatedLink {
+  const preset = pagePreset(page);
+  if (preset) {
+    return {
+      href: pagePath(page),
+      name: page.name,
       detail: `${preset.spec} · ${preset.width}×${preset.height} px`,
       preset,
-    })),
-    ...LIMIT_GUIDES.filter((guide) => guide.slug !== currentSlug).map((guide) => ({
-      href: `/${guide.slug}`,
-      name: `Resize to ${guide.kb} KB`,
-      detail: `JPEG under ${guide.kb} KB, any size`,
-      kb: guide.kb,
-    })),
+    };
+  }
+  const kb = page.limit?.maxKb;
+  const link = { href: pagePath(page), name: page.name };
+  return kb
+    ? { ...link, detail: `JPEG under ${kb} KB, any size`, kb }
+    : { ...link, detail: page.metaDescription.split(". ")[0] };
+}
+
+export function RelatedPages({ pages }: { pages: PageEntry[] }) {
+  const links: RelatedLink[] = [
+    ...pages.map(relatedLink),
     { href: "/", name: "Custom size", detail: "Any width × height in pixels" },
   ];
 

@@ -1,4 +1,4 @@
-import type { Faq, Source } from "@/lib/guides";
+import type { Faq, Source } from "@/lib/pages";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 
 export const siteSchema = {

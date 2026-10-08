@@ -20,7 +20,7 @@ import {
   type ExportFormat,
   type FitStatus,
 } from "@/lib/image-export";
-import { FORM_PRESETS, getPreset, type FormPreset } from "@/lib/presets";
+import type { FormPreset } from "@/lib/presets";
 import {
   AlertIcon,
   CameraIcon,
@@ -247,18 +247,24 @@ export default function PhotoEditor({
   title,
   titleAccent,
   intro,
-  presetSlug,
+  preset: initialPreset,
+  presets: featuredPresets,
   maxKb: initialMaxKb,
 }: {
   title: string;
   titleAccent: string;
   intro: string;
   /** Preset applied to every photo loaded on this page, for the per-size guide pages. */
-  presetSlug?: string;
+  preset?: FormPreset;
+  /** Presets offered in the size picker. The page's own preset is added when it isn't one of them. */
+  presets: FormPreset[];
   /** File size limit the editor starts with, for the per-limit guide pages. */
   maxKb?: number;
 }) {
-  const initialPreset = presetSlug ? getPreset(presetSlug) : undefined;
+  const pickerPresets =
+    initialPreset && !featuredPresets.some((preset) => preset.slug === initialPreset.slug)
+      ? [initialPreset, ...featuredPresets]
+      : featuredPresets;
 
   const imgRef = useRef<HTMLImageElement>(null);
   const originalImgRef = useRef<HTMLImageElement>(null);
@@ -836,7 +842,7 @@ export default function PhotoEditor({
                 aria-labelledby="registry-heading"
                 className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3"
               >
-                {[...FORM_PRESETS, undefined].map((preset) => {
+                {[...pickerPresets, undefined].map((preset) => {
                   const active = chosenPreset?.slug === preset?.slug;
                   return (
                     <button
@@ -909,7 +915,7 @@ export default function PhotoEditor({
               </StepHeading>
 
               <div role="group" aria-label="Form and ID presets" className="grid grid-cols-3 gap-1.5">
-                {FORM_PRESETS.map((preset) => {
+                {pickerPresets.map((preset) => {
                   const active =
                     aspect === preset.aspect &&
                     targetWidth === preset.width &&
