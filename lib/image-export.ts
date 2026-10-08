@@ -49,6 +49,49 @@ export function drawCroppedCanvas(
   return canvas;
 }
 
+/** Share of the photo's height the name and date strip covers, like a studio's printed strip. */
+export const STAMP_BAND = 0.18;
+
+/**
+ * Prints the name and date on a white strip across the bottom of the photo: the name in capitals on
+ * the first line, the date under it, each shrunk to fit the width. Draws over the photo, so frame
+ * the face with room below the chin.
+ */
+export function stampNameAndDate(canvas: HTMLCanvasElement, name: string, date: string) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const { width, height } = canvas;
+  const band = Math.max(12, Math.round(height * STAMP_BAND));
+  const top = height - band;
+  const padding = width * 0.05;
+  const lines = [name.trim().toUpperCase(), date].filter(Boolean);
+  if (lines.length === 0) return;
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, top, width, band);
+  ctx.fillStyle = "#000000";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  const lineHeight = band / lines.length;
+  lines.forEach((line, index) => {
+    let size = Math.floor(lineHeight * 0.62);
+    ctx.font = `700 ${size}px Arial, Helvetica, sans-serif`;
+    const measured = ctx.measureText(line).width;
+    if (measured > width - padding * 2) {
+      size = Math.max(6, Math.floor((size * (width - padding * 2)) / measured));
+      ctx.font = `700 ${size}px Arial, Helvetica, sans-serif`;
+    }
+    ctx.fillText(line, width / 2, top + lineHeight * (index + 0.5), width - padding * 2);
+  });
+}
+
+/** "2026-10-08" → "08/10/2026", the day-first order Indian forms use. */
+export function formatStampDate(isoDate: string) {
+  const [year, month, day] = isoDate.split("-");
+  return year && month && day ? `${day}/${month}/${year}` : "";
+}
+
 export function canvasToBlob(
   canvas: HTMLCanvasElement,
   format: ExportFormat,

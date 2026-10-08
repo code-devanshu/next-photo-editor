@@ -1,3 +1,4 @@
+import PdfMaker from "@/components/pdf-maker";
 import PhotoEditor from "@/components/photo-editor";
 import {
   FaqList,
@@ -37,16 +38,21 @@ export function LandingPage({ page }: { page: PageEntry }) {
           })
         )}
       />
-      <PhotoEditor
-        title={page.h1}
-        titleAccent={page.h1Accent}
-        intro={page.intro}
-        preset={preset}
-        presets={FEATURED_PRESETS}
-        maxKb={page.limit?.maxKb}
-        minKb={page.limit?.minKb}
-        kind={page.limit?.kind}
-      />
+      {page.tool === "pdf" ? (
+        <PdfMaker title={page.h1} titleAccent={page.h1Accent} intro={page.intro} maxKb={page.limit?.maxKb} />
+      ) : (
+        <PhotoEditor
+          title={page.h1}
+          titleAccent={page.h1Accent}
+          intro={page.intro}
+          preset={preset}
+          presets={FEATURED_PRESETS}
+          maxKb={page.limit?.maxKb}
+          minKb={page.limit?.minKb}
+          kind={page.limit?.kind}
+          stamp={page.stamp}
+        />
+      )}
       <GuideContent>
         {page.question && page.answer && (
           <SizeAnswer question={page.question} answer={page.answer} facts={page.facts ?? []} />

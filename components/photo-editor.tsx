@@ -16,6 +16,9 @@ import {
   drawCroppedCanvas,
   encodeCanvas,
   formatBytes,
+  formatStampDate,
+  STAMP_BAND,
+  stampNameAndDate,
   TOP_QUALITY,
   type ExportFormat,
   type FitStatus,
@@ -165,9 +168,10 @@ function FrameGuide({
   const height = Math.min(maxHeight, Math.round(FRAME_MAX_WIDTH / aspect));
   return (
     <span className="flex flex-col items-center gap-3">
+      {/* Width follows from the aspect ratio; phones get a shorter guide so the upload buttons stay on screen. */}
       <span
-        className="relative block overflow-hidden rounded-[3px] border-2 border-dashed border-booth/75 transition-[width,height] duration-500 ease-mech"
-        style={{ width: Math.round(height * aspect), height }}
+        className="relative block h-[min(var(--frame-h),5.5rem)] overflow-hidden rounded-[3px] border-2 border-dashed border-booth/75 transition-[height] duration-500 ease-mech sm:h-(--frame-h)"
+        style={{ "--frame-h": `${height}px`, aspectRatio: aspect } as React.CSSProperties}
       >
         {kind === "thumb" ? (
           <svg
@@ -263,6 +267,7 @@ export default function PhotoEditor({
   maxKb: initialMaxKb,
   minKb: initialMinKb,
   kind: initialKind,
+  stamp: initialStamp = false,
 }: {
   title: string;
   titleAccent: string;
@@ -277,6 +282,8 @@ export default function PhotoEditor({
   minKb?: number;
   /** What the page's upload is, for the framing guide on pages without a preset. */
   kind?: FormPreset["kind"];
+  /** Start with the name and date strip turned on. */
+  stamp?: boolean;
 }) {
   const pickerPresets =
     initialPreset && !featuredPresets.some((preset) => preset.slug === initialPreset.slug)
@@ -317,6 +324,11 @@ export default function PhotoEditor({
     initialPreset || initialMaxKb || initialMinKb ? "jpeg" : "png"
   );
   const [quality, setQuality] = useState(0.9);
+  // Name and date printed on a strip across the bottom, as some forms ask for.
+  const [stampOn, setStampOn] = useState(initialStamp);
+  const [stampName, setStampName] = useState("");
+  const [stampDate, setStampDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const stampText = stampOn ? { name: stampName, date: formatStampDate(stampDate) } : null;
   // File size limit in KB. While one is set, the JPEG quality is chosen to fit it.
   const [maxKb, setMaxKb] = useState<number | null>(initialMaxKb ?? initialPreset?.maxKb ?? null);
   // Kept apart from maxKb so typing 200 doesn't clear the field when it passes through 20.
@@ -351,6 +363,13 @@ export default function PhotoEditor({
     getCanShareFilesServerSnapshot
   );
 
+  /** The cropped, resized output, with the name and date strip when it's on. */
+  function renderCanvas(image: HTMLImageElement, crop: PixelCrop, width: number, height: number) {
+    const canvas = drawCroppedCanvas(image, crop, width, height);
+    if (stampText) stampNameAndDate(canvas, stampText.name, stampText.date);
+    return canvas;
+  }
+
   // Regenerate the live preview whenever the crop or output settings change.
   useEffect(() => {
     if (!completedCrop || !imgRef.current || !targetWidth || !targetHeight) {
@@ -362,12 +381,7 @@ export default function PhotoEditor({
     let cancelled = false;
     const timeout = setTimeout(async () => {
       try {
-        const canvas = drawCroppedCanvas(
-          imgRef.current!,
-          completedCrop,
-          targetWidth,
-          targetHeight
-        );
+        const canvas = renderCanvas(imgRef.current!, completedCrop, targetWidth, targetHeight);
         const encoded = await encodeCanvas(canvas, format, quality, {
           min: minBytes,
           max: limitBytes,
@@ -394,7 +408,9 @@ export default function PhotoEditor({
       cancelled = true;
       clearTimeout(timeout);
     };
-  }, [completedCrop, targetWidth, targetHeight, format, quality, limitBytes, minBytes]);
+    // renderCanvas reads the stamp, which is listed by value so typing a name redraws the preview.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [completedCrop, targetWidth, targetHeight, format, quality, limitBytes, minBytes, stampOn, stampName, stampDate]);
 
   useEffect(() => {
     if (isCameraOpen && videoRef.current && streamRef.current) {
@@ -629,7 +645,7 @@ export default function PhotoEditor({
 
   async function exportBlob(): Promise<Blob | null> {
     if (!completedCrop || !imgRef.current || !targetWidth || !targetHeight) return null;
-    const canvas = drawCroppedCanvas(imgRef.current, completedCrop, targetWidth, targetHeight);
+    const canvas = renderCanvas(imgRef.current, completedCrop, targetWidth, targetHeight);
     const encoded = await encodeCanvas(canvas, format, quality, { min: minBytes, max: limitBytes });
     return encoded?.blob ?? null;
   }
@@ -654,7 +670,7 @@ export default function PhotoEditor({
   async function shrinkToFit() {
     if (!limitBytes || !completedCrop || !imgRef.current || !targetWidth || !targetHeight) return;
     try {
-      const canvas = drawCroppedCanvas(imgRef.current, completedCrop, targetWidth, targetHeight);
+      const canvas = renderCanvas(imgRef.current, completedCrop, targetWidth, targetHeight);
       const blob = await canvasToBlob(canvas, "jpeg", SHRINK_QUALITY);
       if (!blob || blob.size <= limitBytes) return;
       const scale = Math.sqrt(limitBytes / blob.size) * 0.95;
@@ -669,7 +685,7 @@ export default function PhotoEditor({
   async function enlargeToFit() {
     if (!minBytes || !completedCrop || !imgRef.current || !targetWidth || !targetHeight) return;
     try {
-      const canvas = drawCroppedCanvas(imgRef.current, completedCrop, targetWidth, targetHeight);
+      const canvas = renderCanvas(imgRef.current, completedCrop, targetWidth, targetHeight);
       const blob = await canvasToBlob(canvas, "jpeg", limitBytes ? TOP_QUALITY : quality);
       if (!blob || blob.size >= minBytes) return;
       const goal = limitBytes
@@ -763,39 +779,20 @@ export default function PhotoEditor({
       {!imageSrc ? (
         <section
           aria-labelledby="hero-title"
-          className="grid gap-4 pt-4 sm:pt-6 lg:grid-cols-12 lg:gap-5 lg:pt-8"
+          className="grid gap-4 pt-4 sm:pt-6 lg:grid-cols-12 lg:gap-x-5 lg:gap-y-0 lg:pt-8"
         >
-          <div className="flex flex-col gap-7 rounded-[22px] bg-booth p-6 text-ink sm:p-8 lg:col-span-5 lg:p-10">
+          {/* On phones the heading, then the upload control, then the intro: the photo picker stays on the first screen. */}
+          <div className="rounded-[22px] bg-booth p-5 text-ink sm:p-8 lg:col-span-5 lg:row-start-1 lg:rounded-b-none lg:p-10 lg:pb-0">
             <h1
               id="hero-title"
-              className="signage text-[2.75rem] text-balance sm:text-6xl xl:text-[4.5rem]"
+              className="signage text-[2.25rem] text-balance sm:text-6xl xl:text-[4.5rem]"
             >
               {title}
               <span className="text-ink/55 normal-case">{titleAccent}</span>
             </h1>
-            <p className="max-w-[46ch] text-[17px] leading-relaxed text-pretty text-ink/80">{intro}</p>
-            <ol aria-label="How it works" className="grid grid-cols-2 gap-x-4 gap-y-3 border-t-2 border-ink pt-5 lg:grid-cols-1 lg:pt-6">
-              {STEPS.map((step, index) => (
-                <li key={step} className="flex items-center gap-3.5">
-                  <StepDisc step={index + 1} />
-                  <span className="text-[15px] leading-tight font-semibold lg:text-[17px]">{step}</span>
-                </li>
-              ))}
-            </ol>
-            <ul
-              aria-label="What you get"
-              className="mt-auto flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold"
-            >
-              {PROMISES.map((promise) => (
-                <li key={promise} className="flex items-center gap-2">
-                  <span aria-hidden="true" className="size-1.5 bg-ink" />
-                  {promise}
-                </li>
-              ))}
-            </ul>
           </div>
 
-          <div className="flex min-w-0 flex-col gap-4 lg:col-span-7">
+          <div className="flex min-w-0 flex-col gap-4 lg:col-span-7 lg:col-start-6 lg:row-span-2 lg:row-start-1">
             <div className="on-dark rounded-[22px] bg-stage p-2.5 text-stage-text shadow-panel">
               <div
                 data-dragging={isDragging || undefined}
@@ -813,16 +810,16 @@ export default function PhotoEditor({
                   // A click on the empty stage opens the file picker, like the button does.
                   if (e.target === e.currentTarget) fileInputRef.current?.click();
                 }}
-                className="relative flex min-h-[22rem] cursor-pointer flex-col items-center justify-center gap-6 rounded-2xl border border-dashed border-stage-line px-6 py-10 text-center transition-colors duration-200 hover:border-stage-muted data-dragging:border-booth data-dragging:bg-stage-raised sm:min-h-[26rem]"
+                className="relative flex cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-stage-line px-4 py-6 text-center transition-colors duration-200 hover:border-stage-muted data-dragging:border-booth data-dragging:bg-stage-raised sm:min-h-[26rem] sm:gap-6 sm:px-6 sm:py-10"
               >
-                <span className="pointer-events-none flex flex-col items-center gap-6">
+                <span className="pointer-events-none flex flex-col items-center gap-4 sm:gap-6">
                   <FrameGuide
                     aspect={chosenPreset?.aspect ?? 4 / 5}
                     caption={presetCaption(chosenPreset, maxKb)}
                     kind={chosenPreset?.kind ?? initialKind}
                   />
                   <span className="flex flex-col gap-1.5">
-                    <span className="signage text-[2rem]">
+                    <span className="signage hidden text-[2rem] sm:block">
                       {isDragging ? "Release to load your photo" : "Drop a photo here"}
                     </span>
                     <span className="text-sm text-stage-muted">JPG, PNG or WEBP, up to 20 MB</span>
@@ -928,6 +925,29 @@ export default function PhotoEditor({
               </div>
             </div>
           </div>
+
+          <div className="flex flex-col gap-7 rounded-[22px] bg-booth p-6 text-ink sm:p-8 lg:col-span-5 lg:col-start-1 lg:row-start-2 lg:rounded-t-none lg:p-10 lg:pt-7">
+            <p className="max-w-[46ch] text-[17px] leading-relaxed text-pretty text-ink/80">{intro}</p>
+            <ol aria-label="How it works" className="grid grid-cols-2 gap-x-4 gap-y-3 border-t-2 border-ink pt-5 lg:grid-cols-1 lg:pt-6">
+              {STEPS.map((step, index) => (
+                <li key={step} className="flex items-center gap-3.5">
+                  <StepDisc step={index + 1} />
+                  <span className="text-[15px] leading-tight font-semibold lg:text-[17px]">{step}</span>
+                </li>
+              ))}
+            </ol>
+            <ul
+              aria-label="What you get"
+              className="mt-auto flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold"
+            >
+              {PROMISES.map((promise) => (
+                <li key={promise} className="flex items-center gap-2">
+                  <span aria-hidden="true" className="size-1.5 bg-ink" />
+                  {promise}
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
       ) : (
         <>
@@ -998,6 +1018,49 @@ export default function PhotoEditor({
                   <PixelInput label="Height in pixels" value={targetHeight} onChange={handleHeightChange} />
                 </div>
               </div>
+
+              {!chosenPreset?.kind && (
+                <div className="flex flex-col gap-2.5 border-t border-ink/25 pt-3">
+                  <label className="flex cursor-pointer items-center gap-2.5 text-sm font-semibold">
+                    <input
+                      type="checkbox"
+                      checked={stampOn}
+                      onChange={(e) => setStampOn(e.target.checked)}
+                      className="size-4 accent-ink"
+                    />
+                    Name and date on photo
+                  </label>
+                  {stampOn && (
+                    <div className="flex gap-2">
+                      <label className="flex min-w-0 flex-1 flex-col gap-1.5">
+                        <span className="text-xs font-medium text-ink/75">Name</span>
+                        <input
+                          type="text"
+                          value={stampName}
+                          onChange={(e) => setStampName(e.target.value)}
+                          placeholder="As on the form"
+                          autoComplete="name"
+                          className="w-full rounded-lg border border-ink/40 bg-surface/60 px-3 py-2 text-[15px] font-semibold uppercase placeholder:font-normal placeholder:normal-case placeholder:text-ink/60 focus:border-ink focus:bg-surface focus:ring-3 focus:ring-ink/20 focus:outline-none"
+                        />
+                      </label>
+                      <label className="flex w-40 shrink-0 flex-col gap-1.5">
+                        <span className="text-xs font-medium text-ink/75">Date of photo</span>
+                        <input
+                          type="date"
+                          value={stampDate}
+                          onChange={(e) => setStampDate(e.target.value)}
+                          className="w-full rounded-lg border border-ink/40 bg-surface/60 px-2.5 py-2 text-[15px] font-semibold tabular-nums focus:border-ink focus:bg-surface focus:ring-3 focus:ring-ink/20 focus:outline-none"
+                        />
+                      </label>
+                    </div>
+                  )}
+                  {stampOn && (
+                    <p className="text-xs text-pretty text-ink/75">
+                      The strip covers the bottom {Math.round(STAMP_BAND * 100)}% of the photo, so leave room below your chin.
+                    </p>
+                  )}
+                </div>
+              )}
             </section>
 
             <div className="on-dark flex flex-wrap items-center gap-x-4 gap-y-3 rounded-t-[22px] bg-ink px-4 py-2.5 text-stage-text lg:col-span-2 lg:row-start-1 lg:mb-4 lg:rounded-[22px]">
@@ -1315,7 +1378,11 @@ export default function PhotoEditor({
                 >
                   <DownloadIcon className="size-4.5 transition duration-200 group-hover:translate-y-px" />
                   Download {formatLabel}
-                  {sizeLabel && <span className="tabular-nums">· {sizeLabel}</span>}
+                  {sizeLabel && (
+                    <span className="tabular-nums">
+                      · {targetWidth} × {targetHeight} px · {sizeLabel}
+                    </span>
+                  )}
                 </button>
                 <div className="flex items-center gap-2">
                   {canShareFiles && (
@@ -1363,7 +1430,11 @@ export default function PhotoEditor({
             >
               <DownloadIcon className="size-4.5" />
               Download {formatLabel}
-              {sizeLabel && <span className="tabular-nums">· {sizeLabel}</span>}
+              {sizeLabel && (
+                <span className="tabular-nums">
+                  · {targetWidth} × {targetHeight} px · {sizeLabel}
+                </span>
+              )}
             </button>
           </div>
         </>

@@ -67,6 +67,10 @@ export type PageEntry = PageContent & {
   preset?: PresetFields;
   /** File size limits the editor starts with, for pages without a fixed pixel size. */
   limit?: { minKb?: number; maxKb?: number; kind?: FormPreset["kind"] };
+  /** The tool at the top of the page: the photo editor, or the image-to-PDF maker. */
+  tool?: "pdf";
+  /** Start the editor with the name and date strip on. */
+  stamp?: boolean;
   /** Categories a hub page lists. */
   hub?: Exclude<Category, "home" | "hub">[];
   /** Official pages the figures were checked against. */

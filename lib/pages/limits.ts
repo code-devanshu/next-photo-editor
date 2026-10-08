@@ -733,7 +733,7 @@ export const LIMIT_PAGES: PageEntry[] = [
       {
         question: "Can FormPic make a 300 KB PDF?",
         answer:
-          "No, FormPic saves JPEG or PNG. For a PDF under a limit, convert the compressed JPEG with your phone's print-to-PDF option.",
+          "Yes. The JPG to PDF page turns one or more images into a single PDF under any limit, 300 KB included, without uploading them.",
       },
       {
         question: "What pixel size should a UPSC photo be at 300 KB?",
@@ -745,7 +745,7 @@ export const LIMIT_PAGES: PageEntry[] = [
     sources: [SRC.upsc, SRC.gate, SRC.jee],
     lastVerified: "2026-10-08",
     updated: "2026-10-08",
-    related: ["upsc-photo", "gate-photo", "resize-image-to-200kb", "350x350-pixels"],
+    related: ["upsc-photo", "gate-photo", "jpg-to-pdf-under-100kb", "350x350-pixels"],
   },
   {
     slug: "resize-image-10kb-to-20kb",

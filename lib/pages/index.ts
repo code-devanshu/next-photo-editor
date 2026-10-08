@@ -8,6 +8,7 @@ import { RAILWAY_PAGES } from "@/lib/pages/railways";
 import { SIZE_PAGES } from "@/lib/pages/sizes";
 import { SSC_PAGES } from "@/lib/pages/ssc";
 import { THUMB_PAGE } from "@/lib/pages/thumb";
+import { TOOL_PAGES } from "@/lib/pages/tools";
 import { VISA_PAGES } from "@/lib/pages/visas";
 import type { Category, PageEntry } from "@/lib/pages/types";
 import type { FormPreset } from "@/lib/presets";
@@ -30,6 +31,7 @@ export const ALL_PAGES: PageEntry[] = [
   THUMB_PAGE,
   ...SIZE_PAGES,
   ...LIMIT_PAGES,
+  ...TOOL_PAGES,
 ];
 
 /** Pages with a route. Drafts stay out of routes, the sitemap and every link list. */
