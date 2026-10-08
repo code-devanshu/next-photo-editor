@@ -31,9 +31,10 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
+    // Everything here sits below the editor, so the browser skips rendering it until it's scrolled near.
     <section
       aria-labelledby={id}
-      className="grid gap-x-16 gap-y-6 border-t-2 border-ink pt-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
+      className="grid gap-x-16 gap-y-6 border-t-2 border-ink pt-8 [contain-intrinsic-size:auto_32rem] [content-visibility:auto] lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
     >
       <h2
         id={id}

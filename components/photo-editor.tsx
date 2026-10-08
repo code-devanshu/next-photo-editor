@@ -1,14 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import ReactCrop, {
-  centerCrop,
-  convertToPixelCrop,
-  makeAspectCrop,
-  type Crop,
-  type PixelCrop,
-} from "react-image-crop";
-import "react-image-crop/dist/ReactCrop.css";
+import dynamic from "next/dynamic";
+import type { Crop, PixelCrop } from "react-image-crop";
+import { centerCrop, convertToPixelCrop, makeAspectCrop } from "@/lib/crop";
 import { PresetOutline } from "@/components/preset-outline";
 import {
   canvasToBlob,
@@ -37,6 +32,13 @@ import {
   RotateRightIcon,
   ShareIcon,
 } from "@/lib/icons";
+
+// The crop box loads with the first photo, not the page; loadCropArea warms it up on intent.
+const loadCropArea = () => import("@/components/crop-area");
+const CropArea = dynamic(loadCropArea, {
+  ssr: false,
+  loading: () => <div className="h-[min(64dvh,36rem)] w-full animate-shimmer rounded-lg skeleton" />,
+});
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
@@ -436,6 +438,7 @@ export default function PhotoEditor({
 
   async function openCamera() {
     setError(null);
+    loadCropArea();
     if (!navigator.mediaDevices?.getUserMedia) {
       setError(t.errors.cameraUnsupported);
       return;
@@ -823,7 +826,11 @@ export default function PhotoEditor({
                   </span>
                 </span>
                 <span className="flex flex-wrap items-center justify-center gap-2.5">
-                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-booth px-5 py-3 text-[15px] font-bold text-ink shadow-key transition duration-200 hover:bg-booth-deep active:scale-[0.98] has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-booth">
+                  <label
+                    onPointerEnter={loadCropArea}
+                    onFocus={loadCropArea}
+                    onTouchStart={loadCropArea}
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-booth px-5 py-3 text-[15px] font-bold text-ink shadow-key transition duration-200 hover:bg-booth-deep active:scale-[0.98] has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-booth">
                     <ImageIcon className="size-4.5" />
                     {t.choosePhoto}
                     <input
@@ -1119,17 +1126,7 @@ export default function PhotoEditor({
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img ref={originalImgRef} src={imageSrc ?? undefined} alt="" className="hidden" aria-hidden="true" />
-              <ReactCrop
-                crop={crop}
-                onChange={(_, percentCrop) => setCrop(percentCrop)}
-                onComplete={(c) => setCompletedCrop(c)}
-                aspect={aspect}
-                minWidth={10}
-                minHeight={10}
-                ruleOfThirds
-                // The library's stylesheet makes the image inherit max-height from this container.
-                style={{ maxHeight: "min(64dvh, 36rem)" }}
-              >
+              <CropArea crop={crop} aspect={aspect} onChange={setCrop} onComplete={setCompletedCrop}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   ref={imgRef}
@@ -1139,7 +1136,7 @@ export default function PhotoEditor({
                   onError={() => setError(t.errors.unreadable)}
                   className="max-h-[min(64dvh,36rem)] max-w-full"
                 />
-              </ReactCrop>
+              </CropArea>
             </section>
 
             <section

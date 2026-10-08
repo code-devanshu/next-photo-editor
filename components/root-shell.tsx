@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo } from "next/font/google";
+import localFont from "next/font/local";
 import { SiteFooter, SiteHeader, SkipLink } from "@/components/site-chrome";
 import { siteSchema } from "@/lib/schema";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, jsonLd } from "@/lib/site";
@@ -7,11 +7,19 @@ import type { Lang } from "@/lib/ui-text";
 import "@/app/globals.css";
 
 // One variable family: the width axis gives the condensed booth signage, normal width the UI.
+// Self-hosted and trimmed to what the site uses, so the preloaded file is 55 KB instead of 90 KB:
+// Archivo v2.001 (SIL OFL, assets/fonts/Archivo-OFL.txt) from google/fonts, instanced with
+//   fonttools varLib.instancer Archivo[wdth,wght].ttf wght=400:800 wdth=75:100
+// then subset to Google's latin range plus ₹ → ↑ ↓ ≤ ≥ with pyftsubset --no-hinting
+//   --layout-features=kern,liga,calt,tnum,lnum,case,rvrn,ccmp,locl,mark,mkmk --flavor=woff2.
 // It has no Devanagari, so Hindi text falls back to the system's Devanagari font.
-const archivo = Archivo({
+const archivo = localFont({
+  src: "../assets/fonts/Archivo-latin-wght400-800-wdth75-100.woff2",
   variable: "--font-archivo",
-  subsets: ["latin"],
-  axes: ["wdth"],
+  weight: "400 800",
+  style: "normal",
+  display: "swap",
+  declarations: [{ prop: "font-stretch", value: "75% 100%" }],
 });
 
 // Set these in the Vercel project's environment variables to verify the site
